@@ -15,9 +15,7 @@ import com.masters.utilities.session.SessionUtils;
 
 public class TokenFilter implements Filter {
 
-	public void destroy() {
-		// TODO Auto-generated method stub		
-	}
+	public void destroy() { }
 
 	public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
 		HttpServletResponse response = (HttpServletResponse) res;
@@ -32,7 +30,7 @@ public class TokenFilter implements Filter {
 		
 		//If request is for token or web application then allow otherwise check token for apis in else block
 		if (resource.equals("masters/auth/login") 
-				|| resource.equals("masters/auth/register")
+				|| resource.equals("masters/auth/register")				
 				|| resource.equals("masters/app")) {
 			chain.doFilter(req, res);        	
 		} else {
@@ -45,7 +43,5 @@ public class TokenFilter implements Filter {
 		}
 	}
 
-	public void init(FilterConfig arg0) throws ServletException {
-		// TODO Auto-generated method stub		
-	}
+	public void init(FilterConfig arg0) throws ServletException { }
 }

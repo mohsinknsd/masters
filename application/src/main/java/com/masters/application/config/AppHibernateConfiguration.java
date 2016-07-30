@@ -45,6 +45,25 @@ public class AppHibernateConfiguration {
         return dataSource;
     }
 	
+	@Bean(name="appSessionFactory")
+	public LocalSessionFactoryBean appSessionFactory() {
+		LocalSessionFactoryBean sessionFactory = new LocalSessionFactoryBean();
+		sessionFactory.setDataSource(appDataSource());
+        sessionFactory.setPackagesToScan(new String[] { "com.masters.application.model" });
+        sessionFactory.setHibernateProperties(hibernateProperties());
+		return sessionFactory;
+	}
+	
+	@Bean(name="appDataSource")
+    public DataSource appDataSource() {
+        DriverManagerDataSource dataSource = new DriverManagerDataSource();
+        dataSource.setDriverClassName(environment.getRequiredProperty("app.hibernate.connection.driver.class"));
+        dataSource.setUrl(environment.getRequiredProperty("app.hibernate.connection.url"));
+        dataSource.setUsername(environment.getRequiredProperty("app.hibernate.connection.username"));
+        dataSource.setPassword(environment.getRequiredProperty("app.hibernate.connection.password"));
+        return dataSource;
+    }
+	
     private Properties hibernateProperties() {
         Properties properties = new Properties();
         properties.put("hibernate.dialect", environment.getRequiredProperty("auth.hibernate.dialect"));
@@ -55,12 +74,24 @@ public class AppHibernateConfiguration {
      
     @Autowired
     @Qualifier("authSessionFactory")
-    private SessionFactory sessionFactory;
+    private SessionFactory authSession;
     
     @Bean(name="authTransactionManager")
     public HibernateTransactionManager authTransactionManager() {
        HibernateTransactionManager txManager = new HibernateTransactionManager();
-       txManager.setSessionFactory(sessionFactory);
+       txManager.setSessionFactory(authSession);
+       return txManager;
+    }
+    
+    
+    @Autowired
+    @Qualifier("appSessionFactory")
+    private SessionFactory appSession;
+    
+    @Bean(name="appTransactionManager")
+    public HibernateTransactionManager appTransactionManager() {
+       HibernateTransactionManager txManager = new HibernateTransactionManager();
+       txManager.setSessionFactory(appSession);
        return txManager;
     }
 }

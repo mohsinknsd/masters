@@ -13,10 +13,8 @@ import com.masters.authorization.model.User;
 public class UserDaoImpl extends AbstractDao implements UserDao {
 
 	@Override
-	public boolean insertUser(User user) {
-		
+	public boolean insertUser(User user) {		
 		return save(user);
-		
 	}	
 
 	@Override
