@@ -76,6 +76,9 @@ public class User {
 	@Column(name = "remarks", nullable = true)
 	private String remarks;
 	
+	@Column(name = "hash", nullable = true)
+	private String hash;
+	
 	@Column(name = "registeredOn", nullable = false)
 	private Date registeredOn;
 	
@@ -89,9 +92,7 @@ public class User {
     @JoinColumn(name="roleId")
 	private Role role;
 	
-	public User() {
-		
-	}
+	public User() {}
 	
 	public User(HashMap<String, String> map) {		
 		this.setUsername(map.get("firstname") + map.get("lastname"));
@@ -258,6 +259,18 @@ public class User {
 
 	public void setRemarks(String remarks) {
 		this.remarks = remarks;
+	}
+	
+	public String getHash() {
+		return hash;
+	}
+
+	public void setHash(String hash) {
+		this.hash = hash;
+	}
+
+	public void setPincode(Integer pincode) {
+		this.pincode = pincode;
 	}
 
 	public Date getRegisteredOn() {

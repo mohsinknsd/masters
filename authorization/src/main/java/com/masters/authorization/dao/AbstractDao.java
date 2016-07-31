@@ -5,6 +5,8 @@ import org.hibernate.SessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
+import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException;
+
 public abstract class AbstractDao {
 	
 	@Autowired
@@ -15,8 +17,8 @@ public abstract class AbstractDao {
 		return authSessionFactory.getCurrentSession();
 	}
 	
-	public boolean save(Object entity) {		
-		 return (Integer) getSession().save(entity) > 0 ? true : false;
+	public int save(Object entity) throws MySQLIntegrityConstraintViolationException{		
+		 return (int) getSession().save(entity);
 	}
 	
 	public void delete(Object entity) {

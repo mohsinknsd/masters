@@ -7,12 +7,13 @@ import org.hibernate.criterion.Restrictions;
 import org.springframework.stereotype.Repository;
 
 import com.masters.authorization.model.Role;
+import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException;
 
 @Repository("RoleDao")
 public class RoleDaoImpl extends AbstractDao implements RoleDao {
 
 	@Override
-	public boolean insertRole(Role role) {
+	public int insertRole(Role role) throws MySQLIntegrityConstraintViolationException {
 		return save(role);
 	}
 

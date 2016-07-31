@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.masters.authorization.dao.UserDao;
 import com.masters.authorization.model.User;
+import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException;
 
 @Service("UserService")
 @Transactional("authTransactionManager")
@@ -17,8 +18,18 @@ public class UserServiceImpl implements UserService {
 	private UserDao userDao;
 
 	@Override	
-	public boolean insertUser(User user) {
+	public int insertUser(User user) throws MySQLIntegrityConstraintViolationException {
 		return userDao.insertUser(user);
+	}
+	
+	@Override
+	public void updateUser(User user) {	
+		userDao.updateUser(user);
+	}
+
+	@Override
+	public User getUser(int userId) {		
+		return userDao.getUser(userId);
 	}
 
 	@Override

@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.masters.authorization.dao.RoleDao;
 import com.masters.authorization.model.Role;
+import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException;
 
 @Service("RoleService")
 @Transactional("authTransactionManager")
@@ -17,7 +18,7 @@ public class RoleServiceImpl implements RoleService {
 	private RoleDao roleDao;
 
 	@Override	
-	public boolean insertRole(Role role) {
+	public int insertRole(Role role) throws MySQLIntegrityConstraintViolationException{
 		return roleDao.insertRole(role);
 	}
 

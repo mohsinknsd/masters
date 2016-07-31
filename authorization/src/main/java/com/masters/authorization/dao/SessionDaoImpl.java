@@ -8,12 +8,13 @@ import org.springframework.stereotype.Repository;
 
 import com.masters.authorization.model.Session;
 import com.masters.authorization.model.User;
+import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException;
 
 @Repository("SessionDao")
 public class SessionDaoImpl extends AbstractDao implements SessionDao {
 
 	@Override
-	public boolean insertSession(Session session) {		
+	public int insertSession(Session session) throws MySQLIntegrityConstraintViolationException {		
 		return save(session);
 	}
 	
