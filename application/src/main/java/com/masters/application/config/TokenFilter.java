@@ -1,6 +1,8 @@
 package com.masters.application.config;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -11,10 +13,19 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.context.support.SpringBeanAutowiringSupport;
+
+import com.masters.authorization.model.Session;
+import com.masters.authorization.model.User;
+import com.masters.authorization.service.SessionService;
 import com.masters.utilities.session.SessionUtils;
 
 public class TokenFilter implements Filter {
 
+	@Autowired
+	SessionService sessionService;
+	
 	public void destroy() { }
 
 	public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
@@ -34,14 +45,19 @@ public class TokenFilter implements Filter {
 				|| resource.equals("masters/app")) {
 			chain.doFilter(req, res);        	
 		} else {
-			String token = request.getHeader("Authorization");
-			if (token != null && token.equals(SessionUtils.getSession().getAttribute(req.getParameter("userId")))) {
-				chain.doFilter(req, res);            		
+			String token = request.getHeader("Authorization");			
+			if (token != null && !token.equals("")) {				
+				List<Session> sessions = sessionService.getSessions(Integer.parseInt(req.getParameter("userId")));				
+				for (Session session : sessions)
+					if (session.getToken().equalsIgnoreCase(token))
+						chain.doFilter(req, res);
 			} else {
-				response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "You are not authorized for the request!");
-			}
+				response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "You are not authorized for the request!");	
+			}			
 		}
 	}
 
-	public void init(FilterConfig arg0) throws ServletException { }
+	public void init(FilterConfig filterConfig) throws ServletException {
+		 SpringBeanAutowiringSupport.processInjectionBasedOnServletContext(this, filterConfig.getServletContext());
+	}
 }

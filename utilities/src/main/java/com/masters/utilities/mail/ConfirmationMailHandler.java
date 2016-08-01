@@ -15,18 +15,20 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 
 
 
-public class MailHandler implements Runnable {
+public class ConfirmationMailHandler implements Runnable {
 	
 	private Class<?> mailConfig;
+	private String link;
 	private String mailTo;
 	private String subject; 
 	private String mailTemplate;
 	
-	public MailHandler(Class<?> mailConfig, String mailTo, String subject, String mailTemplate) {
+	public ConfirmationMailHandler(Class<?> mailConfig, String mailTo, String subject, String link, String mailTemplate) {
 		super();
 		this.mailConfig = mailConfig;
 		this.mailTo = mailTo;
 		this.subject = subject;
+		this.link = link;
 		this.mailTemplate = mailTemplate;
 	}
 
@@ -49,9 +51,7 @@ public class MailHandler implements Runnable {
 			velocityEngine.init();
 			
 			VelocityContext velocityContext = new VelocityContext();
-		    velocityContext.put("username", "User Name");
-		    velocityContext.put("email", "Email Address");
-		    velocityContext.put("unsubscribe", "Dont want to receive these newsletters?");
+		    velocityContext.put("link", link);
 		    
 		    StringWriter stringWriter = new StringWriter();
 		    Template template = velocityEngine.getTemplate(mailTemplate);

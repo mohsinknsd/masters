@@ -20,9 +20,9 @@ public class AppSpringInitializer extends AbstractAnnotationConfigDispatcherServ
         return new String[] { "/" };
     }
     
-    /*@Override
+    @Override
     protected Filter[] getServletFilters() {
-        Filter [] singleton = { new TokenFilter(), new MethodFilter()};
+        Filter [] singleton = { new TokenFilter()};
         return singleton;
-    }*/
+    }
 }

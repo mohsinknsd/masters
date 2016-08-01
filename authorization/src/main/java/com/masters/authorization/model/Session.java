@@ -1,6 +1,7 @@
 package com.masters.authorization.model;
 
 import java.util.Date;
+import java.util.HashMap;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -46,6 +47,20 @@ public class Session {
 	@ManyToOne(optional = false, cascade = CascadeType.ALL)
     @JoinColumn(name="userId")
 	private User user;
+
+	public Session() {
+		super();
+	}
+		
+	public Session(HashMap<String, String> map) {
+		super();
+		this.setDevice(map.get("device"));
+		this.setGcm(map.get("gcm"));
+		this.setImei(map.get("imei"));
+		this.setLocation(map.get("location"));
+		this.setType(map.get("type"));
+		this.setStartedOn(new Date());
+	}
 
 	public int getSessionId() {
 		return sessionId;

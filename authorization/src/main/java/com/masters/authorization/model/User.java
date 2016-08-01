@@ -92,7 +92,11 @@ public class User {
     @JoinColumn(name="roleId")
 	private Role role;
 	
-	public User() {}
+	public User() { }
+	
+	public User(int userId) {
+		this.userId = userId;
+	}
 	
 	public User(HashMap<String, String> map) {		
 		this.setUsername(map.get("firstname") + map.get("lastname"));

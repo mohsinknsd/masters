@@ -20,9 +20,21 @@ public class SessionDaoImpl extends AbstractDao implements SessionDao {
 	
 	@Override
 	@SuppressWarnings("unchecked")
-	public List<Session> getSessions(User user) {
+	public List<Session> getSessions(int userId) {
 		Criteria criteria = getSession().createCriteria(Session.class);
-		criteria.add(Restrictions.eq("userId", user.getUserId()));
+		criteria.add(Restrictions.eq("user.userId", userId));
 		return criteria.list();
 	}
+
+	@Override
+	public void deleteSession(Session session) {
+		delete(session);
+	}
+
+	/*@Override
+	public Session getSession(String userId) {
+		Criteria criteria = getSession().createCriteria(Session.class);
+		criteria.add(Restrictions.eq("userId", userId));
+		return (Session) criteria.uniqueResult();
+	}*/
 }

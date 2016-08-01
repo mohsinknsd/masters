@@ -41,8 +41,11 @@
 					<artifactId>maven-war-plugin</artifactId>
 					<version>2.6</version>
 					<configuration>
+						<attachClasses>true</attachClasses>
+						<classesClassifier>classes</classesClassifier>
 						<failOnMissingWebXml>false</failOnMissingWebXml>
 					</configuration>
+
 				</plugin>
 				<plugin>
 					<artifactId>maven-compiler-plugin</artifactId>

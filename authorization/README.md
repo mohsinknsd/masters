@@ -8,9 +8,10 @@ Listing most common features of the authorization server application as followin
     5. Update user data
     	 a) Profile picture
     	 b) Password
-    	 c) Status (verified, active, de-active etc)
+    	 c) Status (verified, active, inactive etc)
     	 d) role
-    	 e) Any other information
+    	 e) Resend Confirmation/Verification Mail
+    	 f) Any other information
     6. Role Management (by admin only)
     	 a) Insert new role
     	 b) update role data

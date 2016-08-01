@@ -42,7 +42,7 @@ public class Log {
 	 * It is max class name length limit in the logs. If class name is less than this limit, then remaining length
 	 * will be covered by dots(.) using {@code get()} method. 
 	 */
-	private static final int LIMIT = 12;
+	private static final int LIMIT = 18;
 
 	/**
 	 * INF log will come on the console with log level [INF] and will be stored in INF Log file also.

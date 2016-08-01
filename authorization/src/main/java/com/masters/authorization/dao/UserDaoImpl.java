@@ -31,9 +31,9 @@ public class UserDaoImpl extends AbstractDao implements UserDao {
 	}
 	
 	@Override
-	public User getUser(String email, String password) {
+	public User getUser(String key, String password) {
 		Criteria criteria = getSession().createCriteria(User.class);
-		criteria.add(Restrictions.eq("email", email));
+		criteria.add(key.contains("@") ? Restrictions.eq("email", key) : Restrictions.eq("username", key));
 		criteria.add(Restrictions.eq("password", DigestUtils.md5DigestAsHex(password.getBytes())));
 		return (User) criteria.uniqueResult();
 	}
