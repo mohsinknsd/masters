@@ -26,6 +26,10 @@ public abstract class AbstractDao {
 	}
 
 	public void update(Object entity) {
-		getSession().update(entity);
+		getSession().update(entity);		
+	}
+	
+	public void saveOrUpdate(Object entity) {
+		getSession().saveOrUpdate(entity);
 	}
 }

@@ -1,7 +1,6 @@
 package com.masters.application.config;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 import javax.servlet.Filter;
@@ -17,9 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.context.support.SpringBeanAutowiringSupport;
 
 import com.masters.authorization.model.Session;
-import com.masters.authorization.model.User;
 import com.masters.authorization.service.SessionService;
-import com.masters.utilities.session.SessionUtils;
 
 public class TokenFilter implements Filter {
 
@@ -46,14 +43,17 @@ public class TokenFilter implements Filter {
 			chain.doFilter(req, res);        	
 		} else {
 			String token = request.getHeader("Authorization");			
-			if (token != null && !token.equals("")) {				
+			String userId = req.getParameter("userId");
+			if (token != null && !token.equals("") && userId != null && !userId.equals("")) {
 				List<Session> sessions = sessionService.getSessions(Integer.parseInt(req.getParameter("userId")));				
 				for (Session session : sessions)
-					if (session.getToken().equalsIgnoreCase(token))
+					if (session.getToken().equalsIgnoreCase(token)) {
 						chain.doFilter(req, res);
-			} else {
-				response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "You are not authorized for the request!");	
-			}			
+						return;
+					}
+			} 
+			response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "You are not authorized for the request!");	
+						
 		}
 	}
 

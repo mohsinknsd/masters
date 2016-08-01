@@ -168,18 +168,20 @@ DROP TABLE IF EXISTS `sessions`;
 CREATE TABLE `sessions` (
   `sessionId` int(11) NOT NULL AUTO_INCREMENT,
   `userId` int(11) NOT NULL,
-  `device` varchar(45) DEFAULT NULL COMMENT 'Device can be stored with an alias so this field can be used to insert device title/alias',
+  `client` varchar(45) DEFAULT NULL COMMENT 'In this field, device or browser name can be stored.',
   `type` varchar(45) DEFAULT NULL COMMENT 'It is for category of device. Device can be a mobile device or a computer.',
   `location` varchar(45) DEFAULT NULL COMMENT 'It can be MAC address or the location of the device',
-  `imei` varchar(20) DEFAULT NULL,
+  `trace` varchar(20) DEFAULT NULL COMMENT 'IMEI in case of mobile and IP in case of WEB session',
   `gcm` text,
   `token` text,
   `startedOn` datetime NOT NULL COMMENT 'session start timestamp',
+  `lastUpdatedOn` datetime NOT NULL,
   `status` tinyint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`sessionId`),
+  UNIQUE KEY `unique_trace` (`trace`),
   KEY `fk_user_session_key` (`userId`),
   CONSTRAINT `fk_user_session_key` FOREIGN KEY (`userId`) REFERENCES `users` (`userId`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -188,7 +190,7 @@ CREATE TABLE `sessions` (
 
 LOCK TABLES `sessions` WRITE;
 /*!40000 ALTER TABLE `sessions` DISABLE KEYS */;
-INSERT INTO `sessions` VALUES (1,2,'Apple Iphone 5c','mobile','new delhi, india','23412342343432',NULL,NULL,'2016-07-29 14:54:52',1);
+INSERT INTO `sessions` VALUES (1,2,'Apple Iphone 5c','mobile','new delhi, india','23412342343432',NULL,NULL,'2016-07-29 14:54:52','0000-00-00 00:00:00',1),(3,1,'postman','computer',NULL,'172.20.10.2',NULL,'10fa1326-a45c-4164-ba9f-638b86b00b1f','2016-08-01 23:37:48','2016-08-01 23:54:49',0);
 /*!40000 ALTER TABLE `sessions` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -220,7 +222,7 @@ CREATE TABLE `users` (
   `country` varchar(45) DEFAULT NULL,
   `pincode` tinyint(6) DEFAULT NULL,
   `remarks` varchar(255) DEFAULT NULL COMMENT 'Description or short note for the user',
-  `hash` text,
+  `userKey` text COMMENT 'To store hashes or temporary security tokens',
   `registeredOn` datetime DEFAULT NULL COMMENT 'Registration Date',
   `custom` varchar(45) DEFAULT NULL COMMENT 'Additional column to observe any immediate change in the  table',
   `status` tinyint(2) DEFAULT '0' COMMENT 'If user is not verified using confirmation mail or mobile OTP then status will be 0. If status is 1 then user is verified and active.',
@@ -229,7 +231,7 @@ CREATE TABLE `users` (
   UNIQUE KEY `unique_user_username` (`username`),
   KEY `fk_user_role_key` (`roleId`),
   CONSTRAINT `fk_user_role_key` FOREIGN KEY (`roleId`) REFERENCES `roles` (`roleId`)
-) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -293,4 +295,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2016-08-01  1:49:14
+-- Dump completed on 2016-08-02  0:30:09

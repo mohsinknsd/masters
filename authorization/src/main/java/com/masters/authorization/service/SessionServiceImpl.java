@@ -8,8 +8,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.masters.authorization.dao.SessionDao;
 import com.masters.authorization.model.Session;
-import com.masters.authorization.model.User;
-import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException;
 
 @Service("SessionService")
 @Transactional("authTransactionManager")
@@ -19,13 +17,18 @@ public class SessionServiceImpl implements SessionService {
 	private SessionDao sessionDao;	
 
 	@Override
-	public int insertSession(Session session) throws MySQLIntegrityConstraintViolationException {
-		return sessionDao.insertSession(session);
+	public void saveOrUpdateSession(Session session) {	
+		sessionDao.saveOrUpdateSession(session);
 	}
 
 	@Override
 	public void deleteSession(Session session) {
 		sessionDao.deleteSession(session);
+	}
+	
+	@Override
+	public Session getSession(String trace) {
+		return sessionDao.getSession(trace);
 	}
 
 	@Override

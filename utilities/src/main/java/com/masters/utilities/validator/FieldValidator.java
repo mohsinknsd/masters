@@ -2,6 +2,7 @@ package com.masters.utilities.validator;
 
 import java.lang.reflect.Field;
 import java.util.AbstractMap.SimpleEntry;
+import java.util.HashMap;
 
 public class FieldValidator {	
 	public static SimpleEntry<Boolean, String> validate (Object object, String ... fields) {		
@@ -27,5 +28,12 @@ public class FieldValidator {
 			}
 		}
 		return new SimpleEntry<Boolean, String>(true, "Each field has been validated");
-	}	
+	}
+	
+	public static SimpleEntry<Boolean, String> validate (HashMap<String, String> map, String ... fields) {
+		for (String s : fields)
+			if (map.get(s) == null || map.get(s).trim().equals(""))
+				return new SimpleEntry<Boolean, String>(false, s + " can not be null or empty");
+		return new SimpleEntry<Boolean, String>(true, "Each field has been validated");
+	}
 }

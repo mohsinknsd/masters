@@ -76,8 +76,8 @@ public class User {
 	@Column(name = "remarks", nullable = true)
 	private String remarks;
 	
-	@Column(name = "hash", nullable = true)
-	private String hash;
+	@Column(name = "userKey", nullable = true)
+	private String userKey;
 	
 	@Column(name = "registeredOn", nullable = false)
 	private Date registeredOn;
@@ -265,12 +265,12 @@ public class User {
 		this.remarks = remarks;
 	}
 	
-	public String getHash() {
-		return hash;
+	public String getUserKey() {
+		return userKey;
 	}
 
-	public void setHash(String hash) {
-		this.hash = hash;
+	public void setUserKey(String userKey) {
+		this.userKey = userKey;
 	}
 
 	public void setPincode(Integer pincode) {

@@ -7,15 +7,13 @@ import org.hibernate.criterion.Restrictions;
 import org.springframework.stereotype.Repository;
 
 import com.masters.authorization.model.Session;
-import com.masters.authorization.model.User;
-import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException;
 
 @Repository("SessionDao")
 public class SessionDaoImpl extends AbstractDao implements SessionDao {
 
 	@Override
-	public int insertSession(Session session) throws MySQLIntegrityConstraintViolationException {		
-		return save(session);
+	public void saveOrUpdateSession (Session session) {		
+		saveOrUpdate(session);
 	}
 	
 	@Override
@@ -31,10 +29,10 @@ public class SessionDaoImpl extends AbstractDao implements SessionDao {
 		delete(session);
 	}
 
-	/*@Override
-	public Session getSession(String userId) {
+	@Override
+	public Session getSession(String trace) {
 		Criteria criteria = getSession().createCriteria(Session.class);
-		criteria.add(Restrictions.eq("userId", userId));
+		criteria.add(Restrictions.eq("trace", trace));
 		return (Session) criteria.uniqueResult();
-	}*/
+	}
 }

@@ -20,17 +20,17 @@ public class Session {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private int sessionId;	
 	
-	@Column(name = "device", nullable = true)
-	private String device;
+	@Column(name = "client", nullable = false)
+	private String client;
 	
-	@Column(name = "type", nullable = true)
+	@Column(name = "type", nullable = false)
 	private String type;
 	
 	@Column(name = "location", nullable = true)
 	private String location;
 	
-	@Column(name = "imei", nullable = true)
-	private String imei;
+	@Column(name = "trace", nullable = false, unique = true)
+	private String trace;
 	
 	@Column(name = "gcm", nullable = true)
 	private String gcm;
@@ -41,11 +41,14 @@ public class Session {
 	@Column(name = "startedOn", nullable = false)
 	private Date startedOn;
 	
+	@Column(name = "lastUpdatedOn", nullable = false)
+	private Date lastUpdatedOn;
+	
 	@Column(name = "status", nullable = false)
 	private byte status;
 	
-	@ManyToOne(optional = false, cascade = CascadeType.ALL)
-    @JoinColumn(name="userId")
+	@ManyToOne(optional = false, cascade = {CascadeType.DETACH,CascadeType.REFRESH,CascadeType.PERSIST})
+    @JoinColumn(name="userId", insertable = false, updatable = false, nullable = false)
 	private User user;
 
 	public Session() {
@@ -54,12 +57,13 @@ public class Session {
 		
 	public Session(HashMap<String, String> map) {
 		super();
-		this.setDevice(map.get("device"));
-		this.setGcm(map.get("gcm"));
-		this.setImei(map.get("imei"));
-		this.setLocation(map.get("location"));
+		this.setClient(map.get("client"));
 		this.setType(map.get("type"));
+		this.setLocation(map.get("location"));
+		this.setTrace(map.get("trace"));
+		this.setGcm(map.get("gcm"));
 		this.setStartedOn(new Date());
+		this.setLastUpdatedOn(new Date());
 	}
 
 	public int getSessionId() {
@@ -70,12 +74,12 @@ public class Session {
 		this.sessionId = sessionId;
 	}
 
-	public String getDevice() {
-		return device;
+	public String getClient() {
+		return client;
 	}
 
-	public void setDevice(String device) {
-		this.device = device;
+	public void setClient(String client) {
+		this.client = client;
 	}
 
 	public String getType() {
@@ -94,12 +98,12 @@ public class Session {
 		this.location = location;
 	}
 
-	public String getImei() {
-		return imei;
+	public String getTrace() {
+		return trace;
 	}
 
-	public void setImei(String imei) {
-		this.imei = imei;
+	public void setTrace(String trace) {
+		this.trace = trace;
 	}
 
 	public String getGcm() {
@@ -126,6 +130,14 @@ public class Session {
 		this.startedOn = startedOn;
 	}
 
+	public Date getLastUpdatedOn() {
+		return lastUpdatedOn;
+	}
+
+	public void setLastUpdatedOn(Date lastUpdatedOn) {
+		this.lastUpdatedOn = lastUpdatedOn;
+	}
+
 	public byte getStatus() {
 		return status;
 	}
@@ -144,9 +156,18 @@ public class Session {
 
 	@Override
 	public String toString() {
-		return "Session [sessionId=" + sessionId + ", device=" + device
-				+ ", type=" + type + ", location=" + location + ", imei="
-				+ imei + ", gcm=" + gcm + ", token=" + token + ", startedOn="
-				+ startedOn + ", status=" + status + ", user=" + user + "]";
+		return "Session [sessionId="
+				+ sessionId
+				+ ", "
+				+ (client != null ? "client=" + client + ", " : "")
+				+ (type != null ? "type=" + type + ", " : "")
+				+ (location != null ? "location=" + location + ", " : "")
+				+ (trace != null ? "trace=" + trace + ", " : "")
+				+ (gcm != null ? "gcm=" + gcm + ", " : "")
+				+ (token != null ? "token=" + token + ", " : "")
+				+ (startedOn != null ? "startedOn=" + startedOn + ", " : "")
+				+ (lastUpdatedOn != null ? "lastUpdatedOn=" + lastUpdatedOn
+						+ ", " : "") + "status=" + status + ", "
+				+ (user != null ? "user=" + user : "") + "]";
 	}
 }

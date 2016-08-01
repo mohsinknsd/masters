@@ -3,11 +3,10 @@ package com.masters.authorization.service;
 import java.util.List;
 
 import com.masters.authorization.model.Session;
-import com.masters.authorization.model.User;
-import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException;
 
 public interface SessionService {
-	int insertSession(Session session) throws MySQLIntegrityConstraintViolationException;
+	void saveOrUpdateSession(Session session);
 	void deleteSession(Session session);
+	Session getSession(String trace);
 	List<Session> getSessions(int userId);
 }

@@ -8,6 +8,7 @@ import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.AbstractMap.SimpleEntry;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.UUID;
 
@@ -36,14 +37,13 @@ import com.masters.authorization.service.UserService;
 import com.masters.utilities.encryption.Base64Utils;
 import com.masters.utilities.logging.Log;
 import com.masters.utilities.mail.ConfirmationMailHandler;
-import com.masters.utilities.session.SessionUtils;
 import com.masters.utilities.validator.FieldValidator;
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException;
 
 
 @RestController
 @RequestMapping(value = "/auth")
-public class AuthRestController {	
+public class AuthRestController {
 
 	@Autowired
 	UserService userService;
@@ -69,42 +69,59 @@ public class AuthRestController {
 	public ResponseEntity<String> login(@RequestParam(required = false) HashMap<String, String> map) {
 		User user = new User();
 		JsonObject object = new JsonObject();
-		object.addProperty(STATUS, false);	
-		if (map.get("key") == null){
-			object.addProperty(MESSAGE, "Email address or username is required to be logged in");
-		} else if (map.get("key").trim().equals("")){
-			object.addProperty(MESSAGE, "Email or username can not be empty");
-		} else if (map.get("password") == null){
-			object.addProperty(MESSAGE, "Password is required to be logged in");
-		} else if (map.get("password").trim().equals("")){
-			object.addProperty(MESSAGE, "Password can not be empty");
-		} else {			
+		object.addProperty(STATUS, false);
+		SimpleEntry<Boolean, String> result = FieldValidator.validate(map, "key", "password", "client", "type", "trace");
+		if (!result.getKey()) {			
+			object.addProperty(MESSAGE, result.getValue());
+			return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
+		} else {
 			user = userService.getUser(map.get("key"), map.get("password"));
-			if (user != null && user.getUserId() > 0) {				
-				try {
-					String token = UUID.randomUUID().toString();
-					Session session = new Session(map);
+			if (user != null && user.getUserId() > 0) {
+				Log.e(user.toString());
+				String token = UUID.randomUUID().toString();				
+				Session session = sessionService.getSession(map.get("trace"));
+				if (session == null) {
+					session = new Session(map);
 					session.setUser(user);
-					session.setToken(token);					
-					sessionService.insertSession(session);
-					object.addProperty(STATUS, true);
-					object.addProperty(MESSAGE, "User has been logged in successfully.");
-					
-					//object = gson.toJsonTree(user).getAsJsonObject();
-					JsonObject userJson = (JsonObject) gson.toJsonTree(user);
-					userJson.addProperty("token", token);
-					userJson.remove("password");
-					object.add("user", userJson);
-					return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
-				} catch (MySQLIntegrityConstraintViolationException e) {
-					Log.e(e);
-					object.addProperty(MESSAGE, "Unable to create session. Please review your login details.");
-				}								
+					session.setToken(token);	
+				}
+				session.setLastUpdatedOn(new Date());
+				sessionService.saveOrUpdateSession(session);
+				object.addProperty(STATUS, true);
+				object.addProperty(MESSAGE, "User has been logged in successfully.");
+				
+				//object = gson.toJsonTree(user).getAsJsonObject();
+				JsonObject userJson = (JsonObject) gson.toJsonTree(user);
+				userJson.addProperty("token", token);
+				userJson.remove("password");
+				object.add("user", userJson);
+				return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);											
 			} else {
-				object.addProperty(MESSAGE, "Either email address or password is incorrect");				
+				object.addProperty(MESSAGE, "Either email address or password is incorrect");
+				return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
 			}
-		}	
-		return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
+		}		
+	}
+	
+	@RequestMapping(value = "/logout", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<String> logout(@RequestParam(required = false) HashMap<String, String> map) {		
+		JsonObject object = new JsonObject();
+		object.addProperty(STATUS, false);
+		SimpleEntry<Boolean, String> result = FieldValidator.validate(map, "userId", "trace");
+		if (!result.getKey()) {
+			object.addProperty(MESSAGE, result.getValue());
+			return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
+		} else {
+			Session session = sessionService.getSession(map.get("trace"));
+			object.addProperty(STATUS, true);
+			if (session != null) {
+				sessionService.deleteSession(session);				
+				object.addProperty(MESSAGE, "User has been logged out successfully.");
+			} else {				
+				object.addProperty(MESSAGE, "Did not find any opened session for this user");
+			}
+			return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);			
+		}
 	}
 
 	@RequestMapping(value = "/register", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -124,14 +141,14 @@ public class AuthRestController {
 				object.addProperty(STATUS, userId > 0);
 				String replica = String.format("%0" + (10 - String.valueOf(userId).length()) + "d", 0).replace("0", String.valueOf(userId) + "-").trim();
 				Log.w("replica : " + replica);
-				String hash = Base64Utils.encrypt(replica).trim();
-				Log.w("hash : " + hash);
+				String key = Base64Utils.encrypt(replica).trim();
+				Log.w("hash : " + key);
 				String status = Base64Utils.encrypt(ACTIVE);
 				Log.e("encrypted status : " + status);
 				String link = httpServletRequest.getScheme() + "://" + httpServletRequest.getServerName() + ":" 
 						+ httpServletRequest.getServerPort() + httpServletRequest.getContextPath() + "/" + "auth/status?sts=" 
-				+ URLEncoder.encode(status, "UTF-8") + "&hsh=" + URLEncoder.encode(hash, "UTF-8");				
-				user.setHash(hash);
+				+ URLEncoder.encode(status, "UTF-8") + "&hsh=" + URLEncoder.encode(key, "UTF-8");				
+				user.setUserKey(key);
 				userService.updateUser(user);
 				new Thread(new ConfirmationMailHandler(MailConfiguration.class, user.getEmail(),"Verify your email address", link, "templates/confirmation.html")).start();				
 				object.addProperty(MESSAGE, user.getFirstname() + " " + user.getLastname() + " has been registered successfully with username " + user.getUsername());					
@@ -158,7 +175,7 @@ public class AuthRestController {
 				String userId = decryptedHash.split("\\-")[0].trim();
 				Log.w("userId : " + userId);
 				User user = userService.getUser(Integer.parseInt(userId));
-				if (user != null && user.getHash() != null && user.getHash().equals(hsh.trim())) {
+				if (user != null && user.getUserKey() != null && user.getUserKey().equals(hsh.trim())) {
 					Log.w(sts);					
 					if (sts != null && !sts.trim().equals("")) {
 						String decodedStatus = URLDecoder.decode(sts.trim(), "UTF-8");
@@ -168,7 +185,7 @@ public class AuthRestController {
 						byte bit = Byte.parseByte(decryptedStatus);
 						Log.w("status : " + bit);
 						user.setStatus(bit);
-						user.setHash(null);
+						user.setUserKey(null);
 						userService.updateUser(user);	
 					}
 				} else {
