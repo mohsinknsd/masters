@@ -61,8 +61,6 @@ public class AuthRestController {
 	}
 
 	//Default value of status in Session table is 0, do it 1
-	//Update user status as ACTIVE if user logins after de-activation of account
-	//Reactivate if user login after de-activation
 	@RequestMapping(value = "/login", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<String> login(@RequestParam(required = false) HashMap<String, String> map) {
 		User user = new User();
@@ -75,6 +73,7 @@ public class AuthRestController {
 		} else {
 			user = userService.getUser(map.get("key"), map.get("password"));
 			if (user != null && user.getUserId() > 0) {
+				
 				Log.e(user.toString());
 				if (user.getStatus() == Byte.parseByte(BLOCKED)) {
 					object.addProperty(MESSAGE, "Blocked user do not have permission to be logged in");
@@ -85,14 +84,14 @@ public class AuthRestController {
 				} else if (user.getStatus() == Byte.parseByte(DEACTIVATE)) {
 					user.setStatus(Byte.parseByte(ACTIVATE));
 					userService.updateUser(user);
-				}				
+				}
 				
 				String token = UUID.randomUUID().toString();				
 				Session session = sessionService.getSession(user.getUserId(), map.get("trace"));
 				if (session == null) {
 					session = new Session(map);
 					session.setUser(user);
-				}
+				}				
 				session.setToken(token);
 				session.setLastUpdatedOn(new Date());
 				sessionService.saveOrUpdateSession(session);
@@ -131,7 +130,7 @@ public class AuthRestController {
 			}
 			return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);			
 		}
-	}	
+	}
 
 	@RequestMapping(value = "/register", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<String> register(@RequestParam(required = false) HashMap<String, String> map) {

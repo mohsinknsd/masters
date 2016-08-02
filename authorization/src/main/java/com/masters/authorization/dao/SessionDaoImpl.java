@@ -45,8 +45,9 @@ public class SessionDaoImpl extends AbstractDao implements SessionDao {
 	}
 	
 	@Override
-	public void deleteSessions(int userId) {	
-		String hql = "delete from " + "sessoins" + "where userId = :userId";
-		getSession().createQuery(hql).setInteger("userId", userId).executeUpdate();
+	public void deleteSessions(int userId) {
+		for (Session session : getSessions(userId))
+			if (session != null)
+				delete(session);
 	}
 }
