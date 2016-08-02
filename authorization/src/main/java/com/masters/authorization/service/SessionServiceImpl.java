@@ -32,7 +32,7 @@ public class SessionServiceImpl implements SessionService {
 	}
 
 	@Override
-	public Session getSession(int userId, String trace) {		
+	public Session getSession(int userId, String trace) {
 		return sessionDao.getSession(userId, trace);
 	}
 	
