@@ -8,8 +8,7 @@ import java.util.Map;
 
 public class DateTimeParser {
 	private static final Map<String, String> DATE_FORMAT_REGEXPS = new HashMap<String, String>() {
-		private static final long serialVersionUID = 1L;
-		{
+		private static final long serialVersionUID = 1L; {
 			put("^\\d{8}$", "yyyyMMdd");
 			put("^\\d{1,2}-\\d{1,2}-\\d{4}$", "dd-MM-yyyy");
 			put("^\\d{4}-\\d{1,2}-\\d{1,2}$", "yyyy-MM-dd");

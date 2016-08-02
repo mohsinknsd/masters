@@ -45,26 +45,20 @@ import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationExceptio
 @RequestMapping(value = "/auth")
 public class AuthRestController {
 
-	@Autowired
-	UserService userService;
+	@Autowired UserService userService;
+	@Autowired RoleService roleService;
+	@Autowired SessionService sessionService;
+	@Autowired HttpServletRequest httpServletRequest;
 
-	@Autowired
-	RoleService roleService;
-
-	@Autowired
-	SessionService sessionService;
-
-	@Autowired
-	private HttpServletRequest httpServletRequest;
-
-	private static final String ACTIVE = "1";
-	private static final String INACTIVE = "2";
+	private static final String ACTIVATE = "1";
+	private static final String DEACTIVATE = "2";
 
 	//Initializing GSON
 	private static Gson gson; static {
 		gson = new GsonBuilder().setPrettyPrinting().create();
 	}
 
+	//Update user status as ACTIVE if user logins after deactivation of account
 	@RequestMapping(value = "/login", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<String> login(@RequestParam(required = false) HashMap<String, String> map) {
 		User user = new User();
@@ -122,7 +116,7 @@ public class AuthRestController {
 			}
 			return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);			
 		}
-	}
+	}	
 
 	@RequestMapping(value = "/register", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<String> register(@RequestParam(required = false) HashMap<String, String> map) {
@@ -139,14 +133,17 @@ public class AuthRestController {
 			try {
 				int userId = userService.insertUser(user);				
 				object.addProperty(STATUS, userId > 0);								
-				String key = Base64Utils.encrypt(String.format("%0" + (10 - String.valueOf(userId).length()) + "d", 0).replace("0", String.valueOf(userId) + "-").trim()).trim();											
+				String key = Base64Utils.encrypt(String.format("%0" + (10 - String.valueOf(userId).length()) 
+						+ "d", 0).replace("0", String.valueOf(userId) + "-").trim()).trim();											
 				String link = httpServletRequest.getScheme() + "://" + httpServletRequest.getServerName() + ":" 
 						+ httpServletRequest.getServerPort() + httpServletRequest.getContextPath() + "/" + "auth/status?sts=" 
-						+ URLEncoder.encode(Base64Utils.encrypt(ACTIVE), "UTF-8") + "&hsh=" + URLEncoder.encode(key, "UTF-8");				
+						+ URLEncoder.encode(Base64Utils.encrypt(ACTIVATE), "UTF-8") + "&hsh=" + URLEncoder.encode(key, "UTF-8");				
 				user.setUserKey(key);
 				userService.updateUser(user);
-				new Thread(new ConfirmationMailHandler(MailConfiguration.class, user.getEmail(),"Verify your email address", link, "templates/confirmation.html")).start();				
-				object.addProperty(MESSAGE, user.getFirstname() + " " + user.getLastname() + " has been registered successfully with username " + user.getUsername());					
+				new Thread(new ConfirmationMailHandler(MailConfiguration.class, user.getEmail(),
+						"Verify your email address", link, "templates/confirmation.html")).start();				
+				object.addProperty(MESSAGE, user.getFirstname() + " " + user.getLastname() + " has been registered successfully with username " 
+						+ user.getUsername() + ". Please click on confirmation link sent to your email id.");					
 				return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
 			} catch (Exception e) {
 				Log.e(e);
@@ -155,6 +152,39 @@ public class AuthRestController {
 						: "Unable to register user. Please try again");
 				return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
 			}
+		}		
+	}
+	
+	//Check if already deactivated
+	//Destroy all sessions of the user.
+	//Reactivate if user login after deactivation
+	@RequestMapping(value = "/deactivate", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<String> deactivate(@RequestParam(required = false) HashMap<String, String> map) throws Exception {
+		JsonObject object = new JsonObject();
+		object.addProperty(STATUS, false);
+		SimpleEntry<Boolean, String> result = FieldValidator.validate(map,"userId");
+		if (!result.getKey()) {			
+			object.addProperty(MESSAGE, result.getValue());
+			return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
+		} else {
+			User user = userService.getUser(Integer.parseInt(map.get("userId")));
+			if (user != null) {
+				String key = Base64Utils.encrypt(String.format("%0" + (10 - String.valueOf(user.getUserId()).length()) 
+						+ "d", 0).replace("0", String.valueOf(user.getUserId()) + "-").trim()).trim();
+				String link = httpServletRequest.getScheme() + "://" + httpServletRequest.getServerName() + ":" 
+						+ httpServletRequest.getServerPort() + httpServletRequest.getContextPath() + "/" + "auth/status?sts=" 
+						+ URLEncoder.encode(Base64Utils.encrypt(DEACTIVATE), "UTF-8") + "&hsh=" + URLEncoder.encode(key, "UTF-8");
+				user.setUserKey(key);
+				userService.updateUser(user);
+				new Thread(new ConfirmationMailHandler(MailConfiguration.class, user.getEmail(), 
+						"Deactivate your account", link, "templates/deactivate.html")).start();
+				object.addProperty(STATUS, true);
+				object.addProperty(MESSAGE, "A deactivation link has been sent to your email account " + user.getEmail());
+				return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
+			} else {
+				object.addProperty(MESSAGE, "Unable to register user. Please try again");
+				return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
+			}			
 		}		
 	}
 
@@ -167,13 +197,13 @@ public class AuthRestController {
 						.replace(" ", "+")).split("\\-")[0].trim()));
 				if (user != null && user.getUserKey() != null && user.getUserKey().equals(hsh.trim())) {					
 					if (sts != null && !sts.trim().equals("")) {												
-						user.setStatus(Byte.parseByte(Base64Utils.decrypt(URLDecoder.decode(sts.trim(), "UTF-8")).trim()));
+						user.setStatus(Byte.parseByte(Base64Utils.decrypt(URLDecoder.decode(sts.trim(), "UTF-8").replace(" ", "+")).trim()));
 						user.setUserKey(null);
 						userService.updateUser(user);	
 					}
 				} else {
 					Log.e("Confirmation link has been expired!");
-				}		
+				}
 			}
 			if (httpServletRequest != null)
 				httpHeaders.setLocation(new URI(httpServletRequest.getScheme() + "://" + httpServletRequest.getServerName() + ":" 

@@ -44,8 +44,8 @@ public class TokenFilter implements Filter {
 				|| resource.equals("masters/app")) {
 			chain.doFilter(req, res);        	
 		} else {
-			String token = request.getHeader("Authorization").trim();
-			String userId = req.getParameter("userId").trim();
+			String token = request.getHeader("Authorization");
+			String userId = req.getParameter("userId");
 			if (token != null && !token.equals("") && userId != null && !userId.equals("")) {				
 				List<Session> sessions = sessionService.getSessions(Integer.parseInt(req.getParameter("userId")));				
 				for (Session session : sessions)
