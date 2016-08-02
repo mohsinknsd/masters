@@ -13,7 +13,7 @@ public class MailConfiguration {
 		JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
 		mailSender.setHost("smtp.gmail.com");
 		mailSender.setPort(587);
-		mailSender.setUsername("mohsin.khan@teramatrix.in");
+		mailSender.setUsername("jmonster.india@gmail.com");
 		mailSender.setPassword("timeisgod");
 		Properties prop = mailSender.getJavaMailProperties();
 		prop.put("mail.transport.protocol", "smtp");
