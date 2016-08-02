@@ -45,9 +45,10 @@ public class DateTimeParser {
 	 */
 	public static Date getFormattedDate(String dateString) {
 		try {
-			for (String regexp : DATE_FORMAT_REGEXPS.keySet())
-				if (dateString.toLowerCase().matches(regexp))				
-					return new SimpleDateFormat(DATE_FORMAT_REGEXPS.get(regexp)).parse(dateString);		
+			if (dateString != null)
+				for (String regexp : DATE_FORMAT_REGEXPS.keySet())
+					if (dateString.toLowerCase().matches(regexp))				
+						return new SimpleDateFormat(DATE_FORMAT_REGEXPS.get(regexp)).parse(dateString);		
 		} catch (ParseException e) {				
 			e.printStackTrace();			
 		}

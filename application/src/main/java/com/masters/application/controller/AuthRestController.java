@@ -50,13 +50,13 @@ public class AuthRestController {
 
 	@Autowired
 	RoleService roleService;
-	
+
 	@Autowired
 	SessionService sessionService;
-	
+
 	@Autowired
 	private HttpServletRequest httpServletRequest;
-	
+
 	private static final String ACTIVE = "1";
 	private static final String INACTIVE = "2";
 
@@ -89,7 +89,7 @@ public class AuthRestController {
 				sessionService.saveOrUpdateSession(session);
 				object.addProperty(STATUS, true);
 				object.addProperty(MESSAGE, "User has been logged in successfully.");
-				
+
 				//object = gson.toJsonTree(user).getAsJsonObject();
 				JsonObject userJson = (JsonObject) gson.toJsonTree(user);
 				userJson.addProperty("token", token);
@@ -102,7 +102,7 @@ public class AuthRestController {
 			}
 		}		
 	}
-	
+
 	@RequestMapping(value = "/logout", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<String> logout(@RequestParam(required = false) HashMap<String, String> map) {		
 		JsonObject object = new JsonObject();
@@ -138,16 +138,11 @@ public class AuthRestController {
 		} else {
 			try {
 				int userId = userService.insertUser(user);				
-				object.addProperty(STATUS, userId > 0);
-				String replica = String.format("%0" + (10 - String.valueOf(userId).length()) + "d", 0).replace("0", String.valueOf(userId) + "-").trim();
-				Log.w("replica : " + replica);
-				String key = Base64Utils.encrypt(replica).trim();
-				Log.w("hash : " + key);
-				String status = Base64Utils.encrypt(ACTIVE);
-				Log.e("encrypted status : " + status);
+				object.addProperty(STATUS, userId > 0);								
+				String key = Base64Utils.encrypt(String.format("%0" + (10 - String.valueOf(userId).length()) + "d", 0).replace("0", String.valueOf(userId) + "-").trim()).trim();											
 				String link = httpServletRequest.getScheme() + "://" + httpServletRequest.getServerName() + ":" 
 						+ httpServletRequest.getServerPort() + httpServletRequest.getContextPath() + "/" + "auth/status?sts=" 
-				+ URLEncoder.encode(status, "UTF-8") + "&hsh=" + URLEncoder.encode(key, "UTF-8");				
+						+ URLEncoder.encode(Base64Utils.encrypt(ACTIVE), "UTF-8") + "&hsh=" + URLEncoder.encode(key, "UTF-8");				
 				user.setUserKey(key);
 				userService.updateUser(user);
 				new Thread(new ConfirmationMailHandler(MailConfiguration.class, user.getEmail(),"Verify your email address", link, "templates/confirmation.html")).start();				
@@ -167,24 +162,12 @@ public class AuthRestController {
 	public ResponseEntity<Object> status(@RequestParam(required = false) String sts, @RequestParam(required = false) String hsh) {
 		HttpHeaders httpHeaders = new HttpHeaders();		
 		try {
-			if (hsh != null && !hsh.trim().equals("")) {
-				String decodedHash = URLDecoder.decode(hsh.trim(), "UTF-8").replace(" ", "+");
-				Log.w("decodedHash : " + decodedHash);
-				String decryptedHash = Base64Utils.decrypt(decodedHash);
-				Log.w("decryptedHash : " + decryptedHash);
-				String userId = decryptedHash.split("\\-")[0].trim();
-				Log.w("userId : " + userId);
-				User user = userService.getUser(Integer.parseInt(userId));
-				if (user != null && user.getUserKey() != null && user.getUserKey().equals(hsh.trim())) {
-					Log.w(sts);					
-					if (sts != null && !sts.trim().equals("")) {
-						String decodedStatus = URLDecoder.decode(sts.trim(), "UTF-8");
-						Log.w("decoded status : " + decodedStatus);
-						String decryptedStatus = Base64Utils.decrypt(decodedStatus).trim();
-						Log.e("decrypted status : " + decryptedStatus);
-						byte bit = Byte.parseByte(decryptedStatus);
-						Log.w("status : " + bit);
-						user.setStatus(bit);
+			if (hsh != null && !hsh.trim().equals("")) {				
+				User user = userService.getUser(Integer.parseInt(Base64Utils.decrypt(URLDecoder.decode(hsh.trim(), "UTF-8")
+						.replace(" ", "+")).split("\\-")[0].trim()));
+				if (user != null && user.getUserKey() != null && user.getUserKey().equals(hsh.trim())) {					
+					if (sts != null && !sts.trim().equals("")) {												
+						user.setStatus(Byte.parseByte(Base64Utils.decrypt(URLDecoder.decode(sts.trim(), "UTF-8")).trim()));
 						user.setUserKey(null);
 						userService.updateUser(user);	
 					}
@@ -193,8 +176,8 @@ public class AuthRestController {
 				}		
 			}
 			if (httpServletRequest != null)
-			httpHeaders.setLocation(new URI(httpServletRequest.getScheme() + "://" + httpServletRequest.getServerName() + ":" 
-					+ httpServletRequest.getServerPort() + httpServletRequest.getContextPath() + "/"));
+				httpHeaders.setLocation(new URI(httpServletRequest.getScheme() + "://" + httpServletRequest.getServerName() + ":" 
+						+ httpServletRequest.getServerPort() + httpServletRequest.getContextPath() + "/"));
 		} catch (URISyntaxException e) {
 			e.printStackTrace();
 		} catch (Exception e) {
