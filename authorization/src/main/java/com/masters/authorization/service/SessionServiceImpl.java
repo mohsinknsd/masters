@@ -32,6 +32,11 @@ public class SessionServiceImpl implements SessionService {
 	}
 
 	@Override
+	public Session getSession(int userId, String trace) {		
+		return sessionDao.getSession(userId, trace);
+	}
+	
+	@Override
 	public List<Session> getSessions(int userId) {
 		return sessionDao.getSessions(userId);
 	}

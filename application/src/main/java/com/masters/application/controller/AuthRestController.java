@@ -79,12 +79,12 @@ public class AuthRestController {
 			if (user != null && user.getUserId() > 0) {
 				Log.e(user.toString());
 				String token = UUID.randomUUID().toString();				
-				Session session = sessionService.getSession(map.get("trace"));
+				Session session = sessionService.getSession(user.getUserId(), map.get("trace"));
 				if (session == null) {
 					session = new Session(map);
 					session.setUser(user);
-					session.setToken(token);	
 				}
+				session.setToken(token);
 				session.setLastUpdatedOn(new Date());
 				sessionService.saveOrUpdateSession(session);
 				object.addProperty(STATUS, true);
@@ -112,10 +112,10 @@ public class AuthRestController {
 			object.addProperty(MESSAGE, result.getValue());
 			return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
 		} else {
-			Session session = sessionService.getSession(map.get("trace"));
+			Session session = sessionService.getSession(Integer.parseInt(map.get("userId")), map.get("trace"));
 			object.addProperty(STATUS, true);
 			if (session != null) {
-				sessionService.deleteSession(session);				
+				sessionService.deleteSession(session);	
 				object.addProperty(MESSAGE, "User has been logged out successfully.");
 			} else {				
 				object.addProperty(MESSAGE, "Did not find any opened session for this user");

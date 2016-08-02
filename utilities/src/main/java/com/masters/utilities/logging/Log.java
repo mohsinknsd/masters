@@ -98,8 +98,7 @@ public class Log {
 				messages.load(stream);
 				path = Boolean.parseBoolean(messages.getProperty("write.log.files")) ? messages.getProperty("log.file.dir") 
 						+ ((System.getProperty("os.name").equalsIgnoreCase("window")) ? "system-logs" + File.separator : "system-logs" + File.separator) : null;			
-						formatter = new SimpleDateFormat(messages.getProperty("display.date.format"), Locale.US);
-
+						formatter = new SimpleDateFormat(messages.getProperty("display.date.format"), Locale.US);					
 						//now loading all messages
 						//messages.load(new FileReader(new File("resources/messages.properties")));
 						stream = Log.class.getResourceAsStream("/messages.properties");

@@ -17,6 +17,7 @@ import org.springframework.web.context.support.SpringBeanAutowiringSupport;
 
 import com.masters.authorization.model.Session;
 import com.masters.authorization.service.SessionService;
+import com.masters.utilities.logging.Log;
 
 public class TokenFilter implements Filter {
 
@@ -38,20 +39,23 @@ public class TokenFilter implements Filter {
 		
 		//If request is for token or web application then allow otherwise check token for apis in else block
 		if (resource.equals("masters/auth/login") 
+				|| resource.equals("masters/auth/status")
 				|| resource.equals("masters/auth/register")				
 				|| resource.equals("masters/app")) {
 			chain.doFilter(req, res);        	
 		} else {
-			String token = request.getHeader("Authorization");			
-			String userId = req.getParameter("userId");
-			if (token != null && !token.equals("") && userId != null && !userId.equals("")) {
+			String token = request.getHeader("Authorization").trim();
+			String userId = req.getParameter("userId").trim();
+			if (token != null && !token.equals("") && userId != null && !userId.equals("")) {				
 				List<Session> sessions = sessionService.getSessions(Integer.parseInt(req.getParameter("userId")));				
 				for (Session session : sessions)
 					if (session.getToken().equalsIgnoreCase(token)) {
+						Log.e("Session Found! Adding request to the filter chain");
 						chain.doFilter(req, res);
 						return;
 					}
-			} 
+			}
+			Log.e("Returning Error From Token filter");
 			response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "You are not authorized for the request!");	
 						
 		}

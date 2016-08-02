@@ -15,7 +15,7 @@ public class SessionDaoImpl extends AbstractDao implements SessionDao {
 	public void saveOrUpdateSession (Session session) {		
 		saveOrUpdate(session);
 	}
-	
+
 	@Override
 	@SuppressWarnings("unchecked")
 	public List<Session> getSessions(int userId) {
@@ -34,5 +34,13 @@ public class SessionDaoImpl extends AbstractDao implements SessionDao {
 		Criteria criteria = getSession().createCriteria(Session.class);
 		criteria.add(Restrictions.eq("trace", trace));
 		return (Session) criteria.uniqueResult();
+	}
+
+	@Override
+	public Session getSession(int userId, String trace) {
+		Criteria criteria = getSession().createCriteria(Session.class);
+		criteria.add(Restrictions.eq("user.userId", userId));
+		criteria.add(Restrictions.eq("trace", trace));
+		return (Session) criteria.uniqueResult();		
 	}
 }

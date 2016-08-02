@@ -15,6 +15,8 @@ import javax.persistence.Table;
 
 import org.springframework.util.DigestUtils;
 
+import com.masters.utilities.common.DateTimeParser;
+
 @Entity
 @Table(name="users")
 public class User {
@@ -101,15 +103,22 @@ public class User {
 	public User(HashMap<String, String> map) {		
 		this.setUsername(map.get("firstname") + map.get("lastname"));
 		this.setFirstname(map.get("firstname"));
+		this.setFirstname(map.get("middlename"));
 		this.setLastname(map.get("lastname"));
+		this.setImage(map.get("image"));
 		this.setEmail(map.get("email"));
 		this.setPassword(map.get("password"));
 		this.setGender(map.get("gender").trim().equals("1"));
+		this.setBirthdate(DateTimeParser.getFormattedDate(map.get("birthdate")));
 		this.setMobile(map.get("mobile"));
+		this.setPhone(map.get("phone"));
 		this.setAddress(map.get("address"));
 		this.setCity(map.get("city"));
+		this.setDistrict(map.get("district"));
 		this.setState(map.get("state"));
 		this.setCountry(map.get("country"));
+		this.setRemarks(map.get("remarks"));
+		this.setCustom(map.get("custom"));
 		this.setRegisteredOn(new Date());
 	}
 

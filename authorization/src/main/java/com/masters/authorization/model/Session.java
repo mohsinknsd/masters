@@ -47,8 +47,8 @@ public class Session {
 	@Column(name = "status", nullable = false)
 	private byte status;
 	
-	@ManyToOne(optional = false, cascade = {CascadeType.DETACH,CascadeType.REFRESH,CascadeType.PERSIST})
-    @JoinColumn(name="userId", insertable = false, updatable = false, nullable = false)
+	@ManyToOne(optional = false, cascade = {CascadeType.DETACH, CascadeType.REFRESH, CascadeType.PERSIST, CascadeType.MERGE})
+    @JoinColumn(name="userId")
 	private User user;
 
 	public Session() {
