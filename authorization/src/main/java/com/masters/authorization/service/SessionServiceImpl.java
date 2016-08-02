@@ -20,11 +20,6 @@ public class SessionServiceImpl implements SessionService {
 	public void saveOrUpdateSession(Session session) {	
 		sessionDao.saveOrUpdateSession(session);
 	}
-
-	@Override
-	public void deleteSession(Session session) {
-		sessionDao.deleteSession(session);
-	}
 	
 	@Override
 	public Session getSession(String trace) {
@@ -39,5 +34,15 @@ public class SessionServiceImpl implements SessionService {
 	@Override
 	public List<Session> getSessions(int userId) {
 		return sessionDao.getSessions(userId);
+	}
+	
+	@Override
+	public void deleteSession(Session session) {
+		sessionDao.deleteSession(session);
+	}
+
+	@Override
+	public void deleteSessions(int userId) {
+		sessionDao.deleteSessions(userId);
 	}
 }

@@ -25,11 +25,6 @@ public class SessionDaoImpl extends AbstractDao implements SessionDao {
 	}
 
 	@Override
-	public void deleteSession(Session session) {
-		delete(session);
-	}
-
-	@Override
 	public Session getSession(String trace) {
 		Criteria criteria = getSession().createCriteria(Session.class);
 		criteria.add(Restrictions.eq("trace", trace));
@@ -42,5 +37,16 @@ public class SessionDaoImpl extends AbstractDao implements SessionDao {
 		criteria.add(Restrictions.eq("user.userId", userId));
 		criteria.add(Restrictions.eq("trace", trace));
 		return (Session) criteria.uniqueResult();		
+	}
+	
+	@Override
+	public void deleteSession(Session session) {
+		delete(session);
+	}
+	
+	@Override
+	public void deleteSessions(int userId) {	
+		String hql = "delete from " + "sessoins" + "where userId = :userId";
+		getSession().createQuery(hql).setInteger("userId", userId).executeUpdate();
 	}
 }

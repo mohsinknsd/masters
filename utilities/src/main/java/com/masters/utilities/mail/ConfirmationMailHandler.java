@@ -41,7 +41,7 @@ public class ConfirmationMailHandler implements Runnable {
 			MimeMessage mimeMessage = mailSender.createMimeMessage();
 			
 			MimeMessageHelper mailMsg = new MimeMessageHelper(mimeMessage);			
-			mailMsg.setFrom("noreply@teramatrix.in");
+			mailMsg.setFrom("jmonster.india@gmail.com");
 			mailMsg.setTo(mailTo);
 			mailMsg.setSubject(subject);
 			

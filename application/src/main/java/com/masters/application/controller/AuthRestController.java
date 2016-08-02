@@ -50,15 +50,19 @@ public class AuthRestController {
 	@Autowired SessionService sessionService;
 	@Autowired HttpServletRequest httpServletRequest;
 
-	private static final String ACTIVATE = "1";
-	private static final String DEACTIVATE = "2";
+	private static final String REGISTERED 	= "0";
+	private static final String ACTIVATE 	= "1";
+	private static final String DEACTIVATE 	= "2";
+	private static final String BLOCKED 	= "3";
 
 	//Initializing GSON
 	private static Gson gson; static {
 		gson = new GsonBuilder().setPrettyPrinting().create();
 	}
 
-	//Update user status as ACTIVE if user logins after deactivation of account
+	//Default value of status in Session table is 0, do it 1
+	//Update user status as ACTIVE if user logins after de-activation of account
+	//Reactivate if user login after de-activation
 	@RequestMapping(value = "/login", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<String> login(@RequestParam(required = false) HashMap<String, String> map) {
 		User user = new User();
@@ -72,6 +76,17 @@ public class AuthRestController {
 			user = userService.getUser(map.get("key"), map.get("password"));
 			if (user != null && user.getUserId() > 0) {
 				Log.e(user.toString());
+				if (user.getStatus() == Byte.parseByte(BLOCKED)) {
+					object.addProperty(MESSAGE, "Blocked user do not have permission to be logged in");
+					return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
+				} else if (user.getStatus() == Byte.parseByte(REGISTERED)) {
+					object.addProperty(MESSAGE, "Please verify your email by clicking on confirmation link sent on your email id " + user.getEmail());
+					return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
+				} else if (user.getStatus() == Byte.parseByte(DEACTIVATE)) {
+					user.setStatus(Byte.parseByte(ACTIVATE));
+					userService.updateUser(user);
+				}				
+				
 				String token = UUID.randomUUID().toString();				
 				Session session = sessionService.getSession(user.getUserId(), map.get("trace"));
 				if (session == null) {
@@ -82,7 +97,7 @@ public class AuthRestController {
 				session.setLastUpdatedOn(new Date());
 				sessionService.saveOrUpdateSession(session);
 				object.addProperty(STATUS, true);
-				object.addProperty(MESSAGE, "User has been logged in successfully.");
+				object.addProperty(MESSAGE, "User has been logged in successfully");
 
 				//object = gson.toJsonTree(user).getAsJsonObject();
 				JsonObject userJson = (JsonObject) gson.toJsonTree(user);
@@ -110,7 +125,7 @@ public class AuthRestController {
 			object.addProperty(STATUS, true);
 			if (session != null) {
 				sessionService.deleteSession(session);	
-				object.addProperty(MESSAGE, "User has been logged out successfully.");
+				object.addProperty(MESSAGE, "User has been logged out successfully");
 			} else {				
 				object.addProperty(MESSAGE, "Did not find any opened session for this user");
 			}
@@ -154,10 +169,8 @@ public class AuthRestController {
 			}
 		}		
 	}
-	
-	//Check if already deactivated
-	//Destroy all sessions of the user.
-	//Reactivate if user login after deactivation
+		
+	//Destroy all sessions of the user.	
 	@RequestMapping(value = "/deactivate", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<String> deactivate(@RequestParam(required = false) HashMap<String, String> map) throws Exception {
 		JsonObject object = new JsonObject();
@@ -168,7 +181,7 @@ public class AuthRestController {
 			return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
 		} else {
 			User user = userService.getUser(Integer.parseInt(map.get("userId")));
-			if (user != null) {
+			if (user != null && user.getStatus() != Byte.parseByte(DEACTIVATE)) {
 				String key = Base64Utils.encrypt(String.format("%0" + (10 - String.valueOf(user.getUserId()).length()) 
 						+ "d", 0).replace("0", String.valueOf(user.getUserId()) + "-").trim()).trim();
 				String link = httpServletRequest.getScheme() + "://" + httpServletRequest.getServerName() + ":" 
@@ -182,7 +195,7 @@ public class AuthRestController {
 				object.addProperty(MESSAGE, "A deactivation link has been sent to your email account " + user.getEmail());
 				return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
 			} else {
-				object.addProperty(MESSAGE, "Unable to register user. Please try again");
+				object.addProperty(MESSAGE, "User's account has been already deactivated");
 				return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
 			}			
 		}		
@@ -196,10 +209,13 @@ public class AuthRestController {
 				User user = userService.getUser(Integer.parseInt(Base64Utils.decrypt(URLDecoder.decode(hsh.trim(), "UTF-8")
 						.replace(" ", "+")).split("\\-")[0].trim()));
 				if (user != null && user.getUserKey() != null && user.getUserKey().equals(hsh.trim())) {					
-					if (sts != null && !sts.trim().equals("")) {												
-						user.setStatus(Byte.parseByte(Base64Utils.decrypt(URLDecoder.decode(sts.trim(), "UTF-8").replace(" ", "+")).trim()));
+					if (sts != null && !sts.trim().equals("")) {
+						Byte status = Byte.parseByte(Base64Utils.decrypt(URLDecoder.decode(sts.trim(), "UTF-8").replace(" ", "+")));
+						user.setStatus(status);
 						user.setUserKey(null);
-						userService.updateUser(user);	
+						userService.updateUser(user);
+						if (String.valueOf(status).equals(DEACTIVATE) || String.valueOf(status).equals(BLOCKED))
+							sessionService.deleteSessions(user.getUserId());
 					}
 				} else {
 					Log.e("Confirmation link has been expired!");
