@@ -64,6 +64,7 @@ public class Session {
 		this.setGcm(map.get("gcm"));
 		this.setStartedOn(new Date());
 		this.setLastUpdatedOn(new Date());
+		this.setStatus((byte) 1);
 	}
 
 	public int getSessionId() {

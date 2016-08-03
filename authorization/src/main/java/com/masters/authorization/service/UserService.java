@@ -10,6 +10,6 @@ public interface UserService {
 	void updateUser(User user);
 	User getUser(int userId);
 	User getUser(String key, String password);
-	User getUser(String username);	
+	User getUser(String username);
 	List<User> getAllUsers();
 }

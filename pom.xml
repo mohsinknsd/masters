@@ -151,6 +151,18 @@
 			<artifactId>velocity</artifactId>
 			<version>1.7</version>
 		</dependency>
+		<!-- APACHE COMMONS FILE UPLOAD -->
+		<dependency>
+			<groupId>commons-fileupload</groupId>
+			<artifactId>commons-fileupload</artifactId>
+			<version>1.3.2</version>
+		</dependency>
+		<!-- CONTENT DELIVERY NETWORK -->
+		<dependency>
+			<groupId>com.cloudinary</groupId>
+			<artifactId>cloudinary-taglib</artifactId>
+			<version>1.4.2</version>
+		</dependency>
 	</dependencies>
 	<modules>
 		<module>utilities</module>

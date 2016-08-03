@@ -1,8 +1,12 @@
 package com.masters.application.controller;
 
-import static com.masters.authorization.model.Constants.MESSAGE;
-import static com.masters.authorization.model.Constants.STATUS;
+import static com.masters.application.model.Constants.MESSAGE;
+import static com.masters.application.model.Constants.STATUS;
 
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
@@ -10,12 +14,14 @@ import java.net.URLEncoder;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import javax.servlet.http.HttpServletRequest;
 
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -24,7 +30,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.SingletonManager;
+import com.cloudinary.utils.ObjectUtils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
@@ -49,6 +59,7 @@ public class AuthRestController {
 	@Autowired RoleService roleService;
 	@Autowired SessionService sessionService;
 	@Autowired HttpServletRequest httpServletRequest;
+	@Autowired Environment environment;
 
 	private static final String REGISTERED 	= "0";
 	private static final String ACTIVATE 	= "1";
@@ -60,7 +71,7 @@ public class AuthRestController {
 		gson = new GsonBuilder().setPrettyPrinting().create();
 	}
 
-	//Default value of status in Session table is 0, do it 1
+	//BUG : Default value of status in Session table is 0, do it 1
 	@RequestMapping(value = "/login", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<String> login(@RequestParam(required = false) HashMap<String, String> map) {
 		User user = new User();
@@ -86,12 +97,12 @@ public class AuthRestController {
 					userService.updateUser(user);
 				}
 				
-				String token = UUID.randomUUID().toString();				
+				String token = UUID.randomUUID().toString();
 				Session session = sessionService.getSession(user.getUserId(), map.get("trace"));
 				if (session == null) {
 					session = new Session(map);
 					session.setUser(user);
-				}				
+				}
 				session.setToken(token);
 				session.setLastUpdatedOn(new Date());
 				sessionService.saveOrUpdateSession(session);
@@ -112,7 +123,7 @@ public class AuthRestController {
 	}
 
 	@RequestMapping(value = "/logout", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<String> logout(@RequestParam(required = false) HashMap<String, String> map) {		
+	public ResponseEntity<String> logout(@RequestParam(required = false) HashMap<String, String> map) {
 		JsonObject object = new JsonObject();
 		object.addProperty(STATUS, false);
 		SimpleEntry<Boolean, String> result = FieldValidator.validate(map, "userId", "trace");
@@ -159,8 +170,7 @@ public class AuthRestController {
 				object.addProperty(MESSAGE, user.getFirstname() + " " + user.getLastname() + " has been registered successfully with username " 
 						+ user.getUsername() + ". Please click on confirmation link sent to your email id.");					
 				return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
-			} catch (Exception e) {
-				Log.e(e);
+			} catch (Exception e) {				
 				object.addProperty(MESSAGE, e instanceof MySQLIntegrityConstraintViolationException  ||
 						e instanceof ConstraintViolationException ? "User is already registered with " + user.getEmail() 
 						: "Unable to register user. Please try again");
@@ -169,7 +179,6 @@ public class AuthRestController {
 		}		
 	}
 		
-	//Destroy all sessions of the user.	
 	@RequestMapping(value = "/deactivate", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<String> deactivate(@RequestParam(required = false) HashMap<String, String> map) throws Exception {
 		JsonObject object = new JsonObject();
@@ -230,4 +239,54 @@ public class AuthRestController {
 		}
 		return new ResponseEntity<>(httpHeaders, HttpStatus.SEE_OTHER);		
 	}
+	
+	@SuppressWarnings("finally")
+	@RequestMapping(value = "/update", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<String> update(@RequestParam(required = false) String userId, @RequestParam("image") MultipartFile image) {
+		JsonObject object = new JsonObject();
+		object.addProperty(STATUS, false);		
+		try {
+			//"http://www.bestprintingonline.com/help_resources/Image/Ducky_Head_Web_Low-Res.jpg"
+        	//CLOUDINARY_URL=cloudinary://749319528558711:Xc4n7bjpmNCh65fpu0BLvJu401Q@ds1olwfms
+        	Map<String, String> config = new HashMap<String, String>();
+        	config.put("cloud_name", "jmonster");
+        	config.put("api_key", "749319528558711");
+        	config.put("api_secret", "Xc4n7bjpmNCh65fpu0BLvJu401Q");
+        	Cloudinary cloudinary = new Cloudinary(config);
+        	Log.e("Cloudinary Constructor");
+        	SingletonManager manager = new SingletonManager();
+        	manager.setCloudinary(cloudinary);
+        	manager.init();
+        	Log.e("Cloudinary Manager Init()");
+	        Map<?, ?> uploadResult = cloudinary.uploader().upload(image.getBytes(), ObjectUtils.emptyMap());
+	        Log.e("Cloudinary Map ", uploadResult.toString());	        
+	        object.addProperty(STATUS, true);
+	        object.addProperty(MESSAGE, "Successfully updated image on the server");
+		} catch (NullPointerException e) {
+			e.printStackTrace();
+			object.addProperty(MESSAGE, "Unable to reach to the user with userId " + userId);
+		} catch (Exception e) {
+			e.printStackTrace();
+			object.addProperty(MESSAGE, "Unable to update image file");
+		} finally {
+			return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
+		}
+	}
+	
+	/*{
+		User user = userService.getUser(Integer.parseInt(userId));	
+		@SuppressWarnings("deprecation")
+		String path = httpServletRequest.getRealPath("/") + "C:"  + File.separator 
+		+ "images" + File.separator + "users" + File.separator;
+		File dir = new File(path);				
+		dir.mkdirs();
+		Log.e(dir.toString());
+		String ext = image.getOriginalFilename();
+		File file = new File(dir, user.getUsername() + ext.substring(ext.lastIndexOf("."), ext.length()));
+		OutputStream outputStream = new FileOutputStream(file);
+        BufferedOutputStream stream = new BufferedOutputStream(outputStream);
+        stream.write(image.getBytes());
+        stream.close();
+        outputStream.close();
+	}*/
 }

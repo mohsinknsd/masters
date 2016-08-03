@@ -35,17 +35,17 @@ public class TokenFilter implements Filter {
 
 		HttpServletRequest request = (HttpServletRequest) req;
 		String resource = request.getRequestURI().substring(1);
-		System.out.println(resource);
 		
-		//If request is for token or web application then allow otherwise check token for apis in else block
 		if (resource.equals("masters/auth/login") 
 				|| resource.equals("masters/auth/status")
-				|| resource.equals("masters/auth/register")				
-				|| resource.equals("masters/app")) {
-			chain.doFilter(req, res);        	
+				|| resource.equals("masters/auth/register")
+				|| resource.equals("masters/auth/update")) {
+			Log.d("Approching " + resource + "without token & user id");
+			chain.doFilter(req, res);
 		} else {
 			String token = request.getHeader("Authorization");
-			String userId = req.getParameter("userId");
+			String userId = req.getParameter("userId");			
+			Log.d("Approching " + resource + " with token " + token + " and user id " + userId);
 			if (token != null && !token.equals("") && userId != null && !userId.equals("")) {				
 				List<Session> sessions = sessionService.getSessions(Integer.parseInt(req.getParameter("userId")));				
 				for (Session session : sessions)
@@ -54,10 +54,8 @@ public class TokenFilter implements Filter {
 						chain.doFilter(req, res);
 						return;
 					}
-			}
-			Log.e("Returning Error From Token filter");
-			response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "You are not authorized for the request!");	
-						
+			}			
+			response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "You are not authorized for the request!");
 		}
 	}
 
