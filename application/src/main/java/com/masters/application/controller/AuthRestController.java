@@ -3,18 +3,17 @@ package com.masters.application.controller;
 import static com.masters.application.model.Constants.MESSAGE;
 import static com.masters.application.model.Constants.STATUS;
 
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.OutputStream;
+import java.lang.reflect.Field;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.AbstractMap.SimpleEntry;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import javax.servlet.http.HttpServletRequest;
@@ -55,16 +54,19 @@ import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationExceptio
 @RequestMapping(value = "/auth")
 public class AuthRestController {
 
+	@Autowired Environment environment;
 	@Autowired UserService userService;
 	@Autowired RoleService roleService;
 	@Autowired SessionService sessionService;
-	@Autowired HttpServletRequest httpServletRequest;
-	@Autowired Environment environment;
+	@Autowired HttpServletRequest httpServletRequest;	
 
 	private static final String REGISTERED 	= "0";
 	private static final String ACTIVATE 	= "1";
 	private static final String DEACTIVATE 	= "2";
 	private static final String BLOCKED 	= "3";
+
+	private static final String [] FIELDS = {"firstname", "lastname", 
+		"role", "email", "password", "gender", "address", "city", "state", "country"};
 
 	//Initializing GSON
 	private static Gson gson; static {
@@ -73,7 +75,7 @@ public class AuthRestController {
 
 	//BUG : Default value of status in Session table is 0, do it 1
 	@RequestMapping(value = "/login", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<String> login(@RequestParam(required = false) HashMap<String, String> map) {
+	public ResponseEntity<String> login(@RequestParam HashMap<String, String> map) {
 		User user = new User();
 		JsonObject object = new JsonObject();
 		object.addProperty(STATUS, false);
@@ -84,7 +86,7 @@ public class AuthRestController {
 		} else {
 			user = userService.getUser(map.get("key"), map.get("password"));
 			if (user != null && user.getUserId() > 0) {
-				
+
 				Log.e(user.toString());
 				if (user.getStatus() == Byte.parseByte(BLOCKED)) {
 					object.addProperty(MESSAGE, "Blocked user do not have permission to be logged in");
@@ -96,7 +98,7 @@ public class AuthRestController {
 					user.setStatus(Byte.parseByte(ACTIVATE));
 					userService.updateUser(user);
 				}
-				
+
 				String token = UUID.randomUUID().toString();
 				Session session = sessionService.getSession(user.getUserId(), map.get("trace"));
 				if (session == null) {
@@ -109,7 +111,6 @@ public class AuthRestController {
 				object.addProperty(STATUS, true);
 				object.addProperty(MESSAGE, "User has been logged in successfully");
 
-				//object = gson.toJsonTree(user).getAsJsonObject();
 				JsonObject userJson = (JsonObject) gson.toJsonTree(user);
 				userJson.addProperty("token", token);
 				userJson.remove("password");
@@ -123,7 +124,7 @@ public class AuthRestController {
 	}
 
 	@RequestMapping(value = "/logout", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<String> logout(@RequestParam(required = false) HashMap<String, String> map) {
+	public ResponseEntity<String> logout(@RequestParam HashMap<String, String> map) {
 		JsonObject object = new JsonObject();
 		object.addProperty(STATUS, false);
 		SimpleEntry<Boolean, String> result = FieldValidator.validate(map, "userId", "trace");
@@ -144,13 +145,12 @@ public class AuthRestController {
 	}
 
 	@RequestMapping(value = "/register", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<String> register(@RequestParam(required = false) HashMap<String, String> map) {
+	public ResponseEntity<String> register(@RequestParam HashMap<String, String> map) {
 		JsonObject object = new JsonObject();
 		object.addProperty(STATUS, false);
 		User user = new User(map);
 		user.setRole(roleService.getRole(map.get("role")));
-		SimpleEntry<Boolean, String> result = FieldValidator.validate(user,"firstname", "lastname", 
-				"role", "email", "password", "address", "city", "state", "country");
+		SimpleEntry<Boolean, String> result = FieldValidator.validate(user, FIELDS);
 		if (!result.getKey()) {			
 			object.addProperty(MESSAGE, result.getValue());
 			return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
@@ -173,14 +173,14 @@ public class AuthRestController {
 			} catch (Exception e) {				
 				object.addProperty(MESSAGE, e instanceof MySQLIntegrityConstraintViolationException  ||
 						e instanceof ConstraintViolationException ? "User is already registered with " + user.getEmail() 
-						: "Unable to register user. Please try again");
+								: "Unable to register user. Please try again");
 				return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
 			}
 		}		
 	}
-		
+
 	@RequestMapping(value = "/deactivate", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<String> deactivate(@RequestParam(required = false) HashMap<String, String> map) throws Exception {
+	public ResponseEntity<String> deactivate(@RequestParam HashMap<String, String> map) throws Exception {
 		JsonObject object = new JsonObject();
 		object.addProperty(STATUS, false);
 		SimpleEntry<Boolean, String> result = FieldValidator.validate(map,"userId");
@@ -210,10 +210,10 @@ public class AuthRestController {
 	}
 
 	@RequestMapping(value = "/status", method = RequestMethod.GET)
-	public ResponseEntity<Object> status(@RequestParam(required = false) String sts, @RequestParam(required = false) String hsh) {
+	public ResponseEntity<Object> status(@RequestParam String sts, @RequestParam String hsh) {
 		HttpHeaders httpHeaders = new HttpHeaders();		
 		try {
-			if (hsh != null && !hsh.trim().equals("")) {				
+			if (hsh != null && !hsh.trim().equals("")) {
 				User user = userService.getUser(Integer.parseInt(Base64Utils.decrypt(URLDecoder.decode(hsh.trim(), "UTF-8")
 						.replace(" ", "+")).split("\\-")[0].trim()));
 				if (user != null && user.getUserKey() != null && user.getUserKey().equals(hsh.trim())) {					
@@ -239,29 +239,83 @@ public class AuthRestController {
 		}
 		return new ResponseEntity<>(httpHeaders, HttpStatus.SEE_OTHER);		
 	}
-	
-	@SuppressWarnings("finally")
+
 	@RequestMapping(value = "/update", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<String> update(@RequestParam(required = false) String userId, @RequestParam("image") MultipartFile image) {
+	public ResponseEntity<String> update(@RequestParam HashMap<String, String> map) {
+		Map<String, Boolean> updatable = new HashMap<String, Boolean>();
+		updatable.put("password", false);
+		updatable.put("mobile", false);
+		updatable.put("address", false);
+		updatable.put("city", false);
+		updatable.put("state", false);
+		updatable.put("country", false);
+
+		JsonObject object = new JsonObject();
+		object.addProperty(STATUS, false);
+		String userId = map.get("userId");
+		if (userId == null || userId.equals("") ) {
+			object.addProperty(MESSAGE, "user id can not be null or empty");
+			return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
+		} else {
+			User user = userService.getUser(Integer.parseInt(userId));
+			if (user != null) {
+				for (String key : new ArrayList<String>(updatable.keySet())) {
+					if (map.keySet().contains(key)) {
+						try {
+							Field field = user.getClass().getDeclaredField(key.trim());							
+							if (field != null && map.get(key) != null && !map.get(key).equals("")) {
+								field.setAccessible(true);
+								field.set(user, map.get(key));
+								updatable.put(key, true);
+							} else {
+								updatable.remove(key);
+							}
+						} catch (Exception e) {
+							updatable.remove(key);
+						}
+					} else {
+						updatable.remove(key);
+					}
+				}
+				
+				if (updatable.size() > 0) {
+					userService.updateUser(user);
+					String params = updatable.keySet().toString();
+					object.addProperty(STATUS, true);
+					object.addProperty(MESSAGE, updatable.size() > 1 ? params.substring(1, params.length() - 1) + " have been updated"
+							: params.substring(1, params.length() - 1) + " has been updated");
+				} else {
+					object.addProperty(MESSAGE, "did not find any updatable field");
+				}
+			} else {
+				object.addProperty(MESSAGE, "Unable to find user with user id " + userId);
+			}			
+			return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
+		}		
+	}
+
+	@SuppressWarnings("finally")
+	@RequestMapping(value = "/image", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<String> image(@RequestParam(required = false) String userId, @RequestParam("image") MultipartFile image) {
 		JsonObject object = new JsonObject();
 		object.addProperty(STATUS, false);		
 		try {
 			//"http://www.bestprintingonline.com/help_resources/Image/Ducky_Head_Web_Low-Res.jpg"
-        	//CLOUDINARY_URL=cloudinary://749319528558711:Xc4n7bjpmNCh65fpu0BLvJu401Q@ds1olwfms
-        	Map<String, String> config = new HashMap<String, String>();
-        	config.put("cloud_name", "jmonster");
-        	config.put("api_key", "749319528558711");
-        	config.put("api_secret", "Xc4n7bjpmNCh65fpu0BLvJu401Q");
-        	Cloudinary cloudinary = new Cloudinary(config);
-        	Log.e("Cloudinary Constructor");
-        	SingletonManager manager = new SingletonManager();
-        	manager.setCloudinary(cloudinary);
-        	manager.init();
-        	Log.e("Cloudinary Manager Init()");
-	        Map<?, ?> uploadResult = cloudinary.uploader().upload(image.getBytes(), ObjectUtils.emptyMap());
-	        Log.e("Cloudinary Map ", uploadResult.toString());	        
-	        object.addProperty(STATUS, true);
-	        object.addProperty(MESSAGE, "Successfully updated image on the server");
+			//CLOUDINARY_URL=cloudinary://749319528558711:Xc4n7bjpmNCh65fpu0BLvJu401Q@ds1olwfms
+			Map<String, String> config = new HashMap<String, String>();
+			config.put("cloud_name", "jmonster");
+			config.put("api_key", "749319528558711");
+			config.put("api_secret", "Xc4n7bjpmNCh65fpu0BLvJu401Q");
+			Cloudinary cloudinary = new Cloudinary(config);
+			Log.e("Cloudinary Constructor");
+			SingletonManager manager = new SingletonManager();
+			manager.setCloudinary(cloudinary);
+			manager.init();
+			Log.e("Cloudinary Manager Init()");
+			Map<?, ?> uploadResult = cloudinary.uploader().upload(image.getBytes(), ObjectUtils.emptyMap());
+			Log.e("Cloudinary Map ", uploadResult.toString());	        
+			object.addProperty(STATUS, true);
+			object.addProperty(MESSAGE, "Successfully updated image on the server");
 		} catch (NullPointerException e) {
 			e.printStackTrace();
 			object.addProperty(MESSAGE, "Unable to reach to the user with userId " + userId);
@@ -272,7 +326,7 @@ public class AuthRestController {
 			return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
 		}
 	}
-	
+
 	/*{
 		User user = userService.getUser(Integer.parseInt(userId));	
 		@SuppressWarnings("deprecation")

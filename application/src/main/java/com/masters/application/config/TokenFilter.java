@@ -39,14 +39,15 @@ public class TokenFilter implements Filter {
 		if (resource.equals("masters/auth/login") 
 				|| resource.equals("masters/auth/status")
 				|| resource.equals("masters/auth/register")
-				|| resource.equals("masters/auth/update")) {
+				|| resource.equals("masters/auth/image")) {
 			Log.d("Approching " + resource + "without token & user id");
 			chain.doFilter(req, res);
 		} else {
 			String token = request.getHeader("Authorization");
 			String userId = req.getParameter("userId");			
 			Log.d("Approching " + resource + " with token " + token + " and user id " + userId);
-			if (token != null && !token.equals("") && userId != null && !userId.equals("")) {				
+			if (token != null && !token.equals("") && userId != null && !userId.equals("")) {
+				//BUG : If passed userId do not have any session then exception occurs
 				List<Session> sessions = sessionService.getSessions(Integer.parseInt(req.getParameter("userId")));				
 				for (Session session : sessions)
 					if (session.getToken().equalsIgnoreCase(token)) {
