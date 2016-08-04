@@ -1,4 +1,4 @@
-package com.masters.utilities.mail;
+package com.masters.application.mail;
 
 import java.io.StringWriter;
 
@@ -13,9 +13,7 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
 
-
-
-public class ConfirmationMailHandler implements Runnable {
+public class ConfirmationMailHandler extends Thread {
 	
 	private Class<?> mailConfig;
 	private String link;
@@ -23,13 +21,21 @@ public class ConfirmationMailHandler implements Runnable {
 	private String subject; 
 	private String mailTemplate;
 	
-	public ConfirmationMailHandler(Class<?> mailConfig, String mailTo, String subject, String link, String mailTemplate) {
+	public ConfirmationMailHandler(Class<?> mailConfig, String mailTo, String link, Mail mail) {
 		super();
 		this.mailConfig = mailConfig;
 		this.mailTo = mailTo;
-		this.subject = subject;
 		this.link = link;
-		this.mailTemplate = mailTemplate;
+		if (mail == Mail.VERIFICATION) {			
+			this.subject = "Verify Your Email Address";
+			this.mailTemplate = "templates/verification.html";
+		} else if (mail == Mail.FORGOT_PASSWORD) {
+			this.subject = "Reset Your Password";
+			this.mailTemplate = "templates/password.html";
+		} else if (mail == Mail.DEACTIVATE) {
+			this.subject = "Deactivate Your Account";
+			this.mailTemplate = "templates/deactivate.html";
+		}
 	}
 
 	@Override

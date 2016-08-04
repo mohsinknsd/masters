@@ -25,6 +25,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.DigestUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -38,6 +39,8 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.masters.application.config.MailConfiguration;
+import com.masters.application.mail.ConfirmationMailHandler;
+import com.masters.application.mail.Mail;
 import com.masters.authorization.model.Session;
 import com.masters.authorization.model.User;
 import com.masters.authorization.service.RoleService;
@@ -45,7 +48,6 @@ import com.masters.authorization.service.SessionService;
 import com.masters.authorization.service.UserService;
 import com.masters.utilities.encryption.Base64Utils;
 import com.masters.utilities.logging.Log;
-import com.masters.utilities.mail.ConfirmationMailHandler;
 import com.masters.utilities.validator.FieldValidator;
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException;
 
@@ -72,8 +74,7 @@ public class AuthRestController {
 	private static Gson gson; static {
 		gson = new GsonBuilder().setPrettyPrinting().create();
 	}
-
-	//BUG : Default value of status in Session table is 0, do it 1
+	
 	@RequestMapping(value = "/login", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<String> login(@RequestParam HashMap<String, String> map) {
 		User user = new User();
@@ -127,19 +128,20 @@ public class AuthRestController {
 	public ResponseEntity<String> logout(@RequestParam String userId, @RequestParam String trace) {
 		JsonObject object = new JsonObject();
 		object.addProperty(STATUS, true);
-		object.addProperty(MESSAGE, "Did not find any opened session for this user");
 		
 		Session session = sessionService.getSession(Integer.parseInt(userId), trace);		
 		if (session != null) {
 			sessionService.deleteSession(session);
 			object.addProperty(MESSAGE, "User has been logged out successfully");
+		} else {
+			object.addProperty(MESSAGE, "Did not find any opened session for this user");	
 		}
 		
 		return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);		
 	}
 
 	@RequestMapping(value = "/register", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<String> register(@RequestParam HashMap<String, String> map) {
+	public ResponseEntity<String> register(@RequestParam HashMap<String, String> map,  @RequestParam(required=false) MultipartFile image) {
 		JsonObject object = new JsonObject();
 		object.addProperty(STATUS, false);
 		User user = new User(map);
@@ -159,8 +161,7 @@ public class AuthRestController {
 						+ URLEncoder.encode(Base64Utils.encrypt(ACTIVATE), "UTF-8") + "&hsh=" + URLEncoder.encode(key, "UTF-8");				
 				user.setUserKey(key);
 				userService.updateUser(user);
-				new Thread(new ConfirmationMailHandler(MailConfiguration.class, user.getEmail(),
-						"Verify your email address", link, "templates/confirmation.html")).start();				
+				new ConfirmationMailHandler(MailConfiguration.class, user.getEmail(),link, Mail.VERIFICATION).start();				
 				object.addProperty(MESSAGE, user.getFirstname() + " " + user.getLastname() + " has been registered successfully with username " 
 						+ user.getUsername() + ". Please click on confirmation link sent to your email id.");					
 				return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
@@ -191,8 +192,7 @@ public class AuthRestController {
 						+ URLEncoder.encode(Base64Utils.encrypt(DEACTIVATE), "UTF-8") + "&hsh=" + URLEncoder.encode(key, "UTF-8");
 				user.setUserKey(key);
 				userService.updateUser(user);
-				new Thread(new ConfirmationMailHandler(MailConfiguration.class, user.getEmail(), 
-						"Deactivate your account", link, "templates/deactivate.html")).start();
+				new ConfirmationMailHandler(MailConfiguration.class, user.getEmail(), link, Mail.DEACTIVATE).start();
 				object.addProperty(STATUS, true);
 				object.addProperty(MESSAGE, "A deactivation link has been sent to your email account " + user.getEmail());
 				return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
@@ -236,8 +236,7 @@ public class AuthRestController {
 
 	@RequestMapping(value = "/update", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<String> update(@RequestParam HashMap<String, String> map) {
-		Map<String, Boolean> updatable = new HashMap<String, Boolean>();
-		updatable.put("password", false);
+		Map<String, Boolean> updatable = new HashMap<String, Boolean>();		
 		updatable.put("mobile", false);
 		updatable.put("address", false);
 		updatable.put("city", false);
@@ -247,45 +246,40 @@ public class AuthRestController {
 		JsonObject object = new JsonObject();
 		object.addProperty(STATUS, false);
 		String userId = map.get("userId");
-		if (userId == null || userId.equals("") ) {
-			object.addProperty(MESSAGE, "user id can not be null or empty");
-			return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
-		} else {
-			User user = userService.getUser(Integer.parseInt(userId));
-			if (user != null) {
-				for (String key : new ArrayList<String>(updatable.keySet())) {
-					if (map.keySet().contains(key)) {
-						try {
-							Field field = user.getClass().getDeclaredField(key.trim());							
-							if (field != null && map.get(key) != null && !map.get(key).equals("")) {
-								field.setAccessible(true);
-								field.set(user, map.get(key));
-								updatable.put(key, true);
-							} else {
-								updatable.remove(key);
-							}
-						} catch (Exception e) {
+		User user = userService.getUser(Integer.parseInt(userId));
+		if (user != null) {
+			for (String key : new ArrayList<String>(updatable.keySet())) {
+				if (map.keySet().contains(key)) {
+					try {
+						Field field = user.getClass().getDeclaredField(key.trim());							
+						if (field != null && map.get(key) != null && !map.get(key).equals("")) {
+							field.setAccessible(true);
+							field.set(user, map.get(key));
+							updatable.put(key, true);
+						} else {
 							updatable.remove(key);
 						}
-					} else {
+					} catch (Exception e) {
 						updatable.remove(key);
 					}
-				}
-				
-				if (updatable.size() > 0) {
-					userService.updateUser(user);
-					String params = updatable.keySet().toString();
-					object.addProperty(STATUS, true);
-					object.addProperty(MESSAGE, updatable.size() > 1 ? params.substring(1, params.length() - 1) + " have been updated"
-							: params.substring(1, params.length() - 1) + " has been updated");
 				} else {
-					object.addProperty(MESSAGE, "did not find any updatable field");
+					updatable.remove(key);
 				}
+			}
+			
+			if (updatable.size() > 0) {
+				userService.updateUser(user);
+				String params = updatable.keySet().toString();
+				object.addProperty(STATUS, true);
+				object.addProperty(MESSAGE, updatable.size() > 1 ? params.substring(1, params.length() - 1) + " have been updated"
+						: params.substring(1, params.length() - 1) + " has been updated");
 			} else {
-				object.addProperty(MESSAGE, "Unable to find user with user id " + userId);
-			}			
-			return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
-		}		
+				object.addProperty(MESSAGE, "did not find any updatable field");
+			}
+		} else {
+			object.addProperty(MESSAGE, "unable to find user with user id " + userId);
+		}			
+		return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);		
 	}
 
 	@SuppressWarnings("finally")
@@ -294,7 +288,7 @@ public class AuthRestController {
 		JsonObject object = new JsonObject();
 		object.addProperty(STATUS, false);
 		try {
-			User user = userService.getUser(userId);
+			User user = userService.getUser(Integer.parseInt(userId));
 			if (user == null) throw new NullPointerException("user can not be null");
 			Map<String, String> config = new HashMap<String, String>();
 			config.put("cloud_name", environment.getRequiredProperty("cloud_name"));
@@ -319,5 +313,22 @@ public class AuthRestController {
 		} finally {
 			return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
 		}
+	}
+	
+	@RequestMapping(value = "/password", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<String> password(@RequestParam String userId, @RequestParam String oldPassword, @RequestParam String newPassword) {		
+		JsonObject object = new JsonObject();
+		object.addProperty(STATUS, false);		
+		User user = userService.getUser(Integer.parseInt(userId));
+		if (user != null && user.getPassword().equals(DigestUtils.md5DigestAsHex(oldPassword.getBytes()))) {
+			user.setPassword(newPassword);
+			userService.updateUser(user);
+			sessionService.deleteSessions(user.getUserId());
+			object.addProperty(STATUS, true);
+			object.addProperty(MESSAGE, "new password has been updated successfully");
+		} else {
+			object.addProperty(MESSAGE, "incorrect password");
+		}			
+		return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);		
 	}
 }
