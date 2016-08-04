@@ -4,6 +4,8 @@ import javax.servlet.Filter;
 
 import org.springframework.web.servlet.support.AbstractAnnotationConfigDispatcherServletInitializer;
 
+import com.masters.application.filter.TokenFilter;
+
 public class AppSpringInitializer extends AbstractAnnotationConfigDispatcherServletInitializer {
 	@Override
     protected Class<?>[] getRootConfigClasses() {		

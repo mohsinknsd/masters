@@ -163,6 +163,11 @@
 			<artifactId>cloudinary-taglib</artifactId>
 			<version>1.4.2</version>
 		</dependency>
+		<dependency>
+			<groupId>com.cloudinary</groupId>
+			<artifactId>cloudinary-http44</artifactId>
+			<version>1.4.2</version>
+		</dependency>
 	</dependencies>
 	<modules>
 		<module>utilities</module>

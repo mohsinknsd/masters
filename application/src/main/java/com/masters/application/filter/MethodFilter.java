@@ -1,4 +1,4 @@
-package com.masters.application.config;
+package com.masters.application.filter;
 
 import java.io.IOException;
 

@@ -1,4 +1,4 @@
-package com.masters.application.config;
+package com.masters.application.filter;
 
 import java.io.IOException;
 import java.util.List;
@@ -38,9 +38,8 @@ public class TokenFilter implements Filter {
 		
 		if (resource.equals("masters/auth/login") 
 				|| resource.equals("masters/auth/status")
-				|| resource.equals("masters/auth/register")
-				|| resource.equals("masters/auth/image")) {
-			Log.d("Approching " + resource + "without token & user id");
+				|| resource.equals("masters/auth/register")) {
+			Log.d("Approching " + resource + " without token & user id");
 			chain.doFilter(req, res);
 		} else {
 			String token = request.getHeader("Authorization");

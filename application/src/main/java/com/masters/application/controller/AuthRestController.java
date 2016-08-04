@@ -2,6 +2,7 @@ package com.masters.application.controller;
 
 import static com.masters.application.model.Constants.MESSAGE;
 import static com.masters.application.model.Constants.STATUS;
+import static com.masters.application.model.Constants.URL;
 
 import java.lang.reflect.Field;
 import java.net.URI;
@@ -13,7 +14,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 import javax.servlet.http.HttpServletRequest;
@@ -86,8 +86,7 @@ public class AuthRestController {
 		} else {
 			user = userService.getUser(map.get("key"), map.get("password"));
 			if (user != null && user.getUserId() > 0) {
-
-				Log.e(user.toString());
+				Log.d(user.toString());
 				if (user.getStatus() == Byte.parseByte(BLOCKED)) {
 					object.addProperty(MESSAGE, "Blocked user do not have permission to be logged in");
 					return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
@@ -104,10 +103,11 @@ public class AuthRestController {
 				if (session == null) {
 					session = new Session(map);
 					session.setUser(user);
-				}
+				}				
 				session.setToken(token);
 				session.setLastUpdatedOn(new Date());
 				sessionService.saveOrUpdateSession(session);
+				
 				object.addProperty(STATUS, true);
 				object.addProperty(MESSAGE, "User has been logged in successfully");
 
@@ -124,24 +124,18 @@ public class AuthRestController {
 	}
 
 	@RequestMapping(value = "/logout", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<String> logout(@RequestParam HashMap<String, String> map) {
+	public ResponseEntity<String> logout(@RequestParam String userId, @RequestParam String trace) {
 		JsonObject object = new JsonObject();
-		object.addProperty(STATUS, false);
-		SimpleEntry<Boolean, String> result = FieldValidator.validate(map, "userId", "trace");
-		if (!result.getKey()) {
-			object.addProperty(MESSAGE, result.getValue());
-			return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
-		} else {
-			Session session = sessionService.getSession(Integer.parseInt(map.get("userId")), map.get("trace"));
-			object.addProperty(STATUS, true);
-			if (session != null) {
-				sessionService.deleteSession(session);	
-				object.addProperty(MESSAGE, "User has been logged out successfully");
-			} else {				
-				object.addProperty(MESSAGE, "Did not find any opened session for this user");
-			}
-			return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);			
+		object.addProperty(STATUS, true);
+		object.addProperty(MESSAGE, "Did not find any opened session for this user");
+		
+		Session session = sessionService.getSession(Integer.parseInt(userId), trace);		
+		if (session != null) {
+			sessionService.deleteSession(session);
+			object.addProperty(MESSAGE, "User has been logged out successfully");
 		}
+		
+		return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);		
 	}
 
 	@RequestMapping(value = "/register", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -296,24 +290,24 @@ public class AuthRestController {
 
 	@SuppressWarnings("finally")
 	@RequestMapping(value = "/image", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<String> image(@RequestParam(required = false) String userId, @RequestParam("image") MultipartFile image) {
+	public ResponseEntity<String> image(@RequestParam String userId, @RequestParam("image") MultipartFile image) {
 		JsonObject object = new JsonObject();
-		object.addProperty(STATUS, false);		
+		object.addProperty(STATUS, false);
 		try {
-			//"http://www.bestprintingonline.com/help_resources/Image/Ducky_Head_Web_Low-Res.jpg"
-			//CLOUDINARY_URL=cloudinary://749319528558711:Xc4n7bjpmNCh65fpu0BLvJu401Q@ds1olwfms
+			User user = userService.getUser(userId);
+			if (user == null) throw new NullPointerException("user can not be null");
 			Map<String, String> config = new HashMap<String, String>();
-			config.put("cloud_name", "jmonster");
-			config.put("api_key", "749319528558711");
-			config.put("api_secret", "Xc4n7bjpmNCh65fpu0BLvJu401Q");
+			config.put("cloud_name", environment.getRequiredProperty("cloud_name"));
+			config.put("api_key", environment.getRequiredProperty("api_key"));
+			config.put("api_secret", environment.getRequiredProperty("api_secret"));
 			Cloudinary cloudinary = new Cloudinary(config);
-			Log.e("Cloudinary Constructor");
 			SingletonManager manager = new SingletonManager();
 			manager.setCloudinary(cloudinary);
 			manager.init();
-			Log.e("Cloudinary Manager Init()");
-			Map<?, ?> uploadResult = cloudinary.uploader().upload(image.getBytes(), ObjectUtils.emptyMap());
-			Log.e("Cloudinary Map ", uploadResult.toString());	        
+			String url = String.valueOf(cloudinary.uploader().upload(image.getBytes(), ObjectUtils.emptyMap()).get("url"));
+			user.setImage(url);
+			userService.updateUser(user);
+			object.addProperty(URL, url);
 			object.addProperty(STATUS, true);
 			object.addProperty(MESSAGE, "Successfully updated image on the server");
 		} catch (NullPointerException e) {
@@ -326,21 +320,4 @@ public class AuthRestController {
 			return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
 		}
 	}
-
-	/*{
-		User user = userService.getUser(Integer.parseInt(userId));	
-		@SuppressWarnings("deprecation")
-		String path = httpServletRequest.getRealPath("/") + "C:"  + File.separator 
-		+ "images" + File.separator + "users" + File.separator;
-		File dir = new File(path);				
-		dir.mkdirs();
-		Log.e(dir.toString());
-		String ext = image.getOriginalFilename();
-		File file = new File(dir, user.getUsername() + ext.substring(ext.lastIndexOf("."), ext.length()));
-		OutputStream outputStream = new FileOutputStream(file);
-        BufferedOutputStream stream = new BufferedOutputStream(outputStream);
-        stream.write(image.getBytes());
-        stream.close();
-        outputStream.close();
-	}*/
 }
