@@ -68,7 +68,7 @@ public class AuthRestController {
 	private static final String BLOCKED 	= "3";
 
 	private static final String [] FIELDS = {"firstname", "lastname", 
-		"role", "email", "password", "gender", "address", "city", "state", "country"};
+		"role", "email", "password", "gender", "address", "city", "state", "country"};	
 
 	//Initializing GSON
 	private static Gson gson; static {
@@ -141,7 +141,7 @@ public class AuthRestController {
 	}
 
 	@RequestMapping(value = "/register", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<String> register(@RequestParam HashMap<String, String> map,  @RequestParam(required=false) MultipartFile image) {
+	public ResponseEntity<String> register(@RequestParam HashMap<String, String> map, @RequestParam(value="image", required=false) MultipartFile image) {
 		JsonObject object = new JsonObject();
 		object.addProperty(STATUS, false);
 		User user = new User(map);
@@ -152,6 +152,18 @@ public class AuthRestController {
 			return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
 		} else {
 			try {
+				if (image != null) {
+					Map<String, String> config = new HashMap<String, String>();
+					config.put("cloud_name", environment.getRequiredProperty("cloud_name"));
+					config.put("api_key", environment.getRequiredProperty("api_key"));
+					config.put("api_secret", environment.getRequiredProperty("api_secret"));
+					Cloudinary cloudinary = new Cloudinary(config);
+					SingletonManager manager = new SingletonManager();
+					manager.setCloudinary(cloudinary);
+					manager.init();
+					String url = String.valueOf(cloudinary.uploader().upload(image.getBytes(), ObjectUtils.emptyMap()).get("url"));
+					user.setImage(url);
+				}
 				int userId = userService.insertUser(user);				
 				object.addProperty(STATUS, userId > 0);								
 				String key = Base64Utils.encrypt(String.format("%0" + (10 - String.valueOf(userId).length()) 
@@ -165,7 +177,8 @@ public class AuthRestController {
 				object.addProperty(MESSAGE, user.getFirstname() + " " + user.getLastname() + " has been registered successfully with username " 
 						+ user.getUsername() + ". Please click on confirmation link sent to your email id.");					
 				return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
-			} catch (Exception e) {				
+			} catch (Exception e) {
+				e.printStackTrace();
 				object.addProperty(MESSAGE, e instanceof MySQLIntegrityConstraintViolationException  ||
 						e instanceof ConstraintViolationException ? "User is already registered with " + user.getEmail() 
 								: "Unable to register user. Please try again");
