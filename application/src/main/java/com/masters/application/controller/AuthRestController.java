@@ -40,7 +40,6 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.masters.application.config.MailConfiguration;
 import com.masters.application.mail.ConfirmationMailHandler;
-import com.masters.application.mail.Mail;
 import com.masters.authorization.model.Session;
 import com.masters.authorization.model.User;
 import com.masters.authorization.service.RoleService;
@@ -173,7 +172,7 @@ public class AuthRestController {
 						+ URLEncoder.encode(Base64Utils.encrypt(ACTIVATE), "UTF-8") + "&hsh=" + URLEncoder.encode(key, "UTF-8");				
 				user.setUserKey(key);
 				userService.updateUser(user);
-				new ConfirmationMailHandler(MailConfiguration.class, user.getEmail(),link, Mail.VERIFICATION).start();				
+				new ConfirmationMailHandler(MailConfiguration.class, user.getEmail(),link, ConfirmationMailHandler.Mail.VERIFICATION).start();				
 				object.addProperty(MESSAGE, user.getFirstname() + " " + user.getLastname() + " has been registered successfully with username " 
 						+ user.getUsername() + ". Please click on confirmation link sent to your email id.");					
 				return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
@@ -205,7 +204,7 @@ public class AuthRestController {
 						+ URLEncoder.encode(Base64Utils.encrypt(DEACTIVATE), "UTF-8") + "&hsh=" + URLEncoder.encode(key, "UTF-8");
 				user.setUserKey(key);
 				userService.updateUser(user);
-				new ConfirmationMailHandler(MailConfiguration.class, user.getEmail(), link, Mail.DEACTIVATE).start();
+				new ConfirmationMailHandler(MailConfiguration.class, user.getEmail(), link, ConfirmationMailHandler.Mail.DEACTIVATE).start();
 				object.addProperty(STATUS, true);
 				object.addProperty(MESSAGE, "A deactivation link has been sent to your email account " + user.getEmail());
 				return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);

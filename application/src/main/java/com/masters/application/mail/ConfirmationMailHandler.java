@@ -21,6 +21,8 @@ public class ConfirmationMailHandler extends Thread {
 	private String subject; 
 	private String mailTemplate;
 	
+	public enum Mail { VERIFICATION, DEACTIVATE, FORGOT_PASSWORD }
+	
 	public ConfirmationMailHandler(Class<?> mailConfig, String mailTo, String link, Mail mail) {
 		super();
 		this.mailConfig = mailConfig;
