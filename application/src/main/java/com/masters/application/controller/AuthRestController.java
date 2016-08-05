@@ -61,19 +61,20 @@ public class AuthRestController {
 	@Autowired SessionService sessionService;
 	@Autowired HttpServletRequest httpServletRequest;	
 
-	private static final String REGISTERED 	= "0";
-	private static final String ACTIVATE 	= "1";
-	private static final String DEACTIVATE 	= "2";
-	private static final String BLOCKED 	= "3";
+	public static final String REGISTERED 	= "0";
+	public static final String ACTIVATE 	= "1";
+	public static final String DEACTIVATE 	= "2";
+	public static final String BLOCKED 		= "3";
 
 	private static final String [] FIELDS = {"firstname", "lastname", 
-		"role", "email", "password", "gender", "address", "city", "state", "country"};	
+			"role", "email", "password", "gender", "address", "city", "state", "country"};	
 
 	//Initializing GSON
 	private static Gson gson; static {
 		gson = new GsonBuilder().setPrettyPrinting().create();
 	}
-	
+
+	//ISSUE : Don't publish role id and status
 	@RequestMapping(value = "/login", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<String> login(@RequestParam HashMap<String, String> map) {
 		User user = new User();
@@ -88,10 +89,10 @@ public class AuthRestController {
 			if (user != null && user.getUserId() > 0) {
 				Log.d(user.toString());
 				if (user.getStatus() == Byte.parseByte(BLOCKED)) {
-					object.addProperty(MESSAGE, "Blocked user do not have permission to be logged in");
+					object.addProperty(MESSAGE, "blocked user do not have permission to be logged in");
 					return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
 				} else if (user.getStatus() == Byte.parseByte(REGISTERED)) {
-					object.addProperty(MESSAGE, "Please verify your email by clicking on confirmation link sent on your email id " + user.getEmail());
+					object.addProperty(MESSAGE, "please verify your email by clicking on confirmation link sent on your email id " + user.getEmail());
 					return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
 				} else if (user.getStatus() == Byte.parseByte(DEACTIVATE)) {
 					user.setStatus(Byte.parseByte(ACTIVATE));
@@ -107,9 +108,9 @@ public class AuthRestController {
 				session.setToken(token);
 				session.setLastUpdatedOn(new Date());
 				sessionService.saveOrUpdateSession(session);
-				
+
 				object.addProperty(STATUS, true);
-				object.addProperty(MESSAGE, "User has been logged in successfully");
+				object.addProperty(MESSAGE, "user has been logged in successfully");
 
 				JsonObject userJson = (JsonObject) gson.toJsonTree(user);
 				userJson.addProperty("token", token);
@@ -117,7 +118,7 @@ public class AuthRestController {
 				object.add("user", userJson);
 				return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);											
 			} else {
-				object.addProperty(MESSAGE, "Either email address or password is incorrect");
+				object.addProperty(MESSAGE, "either email address or password is incorrect");
 				return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
 			}
 		}		
@@ -127,15 +128,15 @@ public class AuthRestController {
 	public ResponseEntity<String> logout(@RequestParam String userId, @RequestParam String trace) {
 		JsonObject object = new JsonObject();
 		object.addProperty(STATUS, true);
-		
+
 		Session session = sessionService.getSession(Integer.parseInt(userId), trace);		
 		if (session != null) {
 			sessionService.deleteSession(session);
-			object.addProperty(MESSAGE, "User has been logged out successfully");
+			object.addProperty(MESSAGE, "user has been logged out successfully");
 		} else {
-			object.addProperty(MESSAGE, "Did not find any opened session for this user");	
+			object.addProperty(MESSAGE, "did not find any opened session for this user");	
 		}
-		
+
 		return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);		
 	}
 
@@ -180,7 +181,7 @@ public class AuthRestController {
 				e.printStackTrace();
 				object.addProperty(MESSAGE, e instanceof MySQLIntegrityConstraintViolationException  ||
 						e instanceof ConstraintViolationException ? "User is already registered with " + map.get("email") 
-								: "Unable to register user. Please try again");
+						: "Unable to register user. Please try again");
 				return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
 			}
 		}		
@@ -206,44 +207,39 @@ public class AuthRestController {
 				userService.updateUser(user);
 				new ConfirmationMailHandler(MailConfiguration.class, user.getEmail(), link, ConfirmationMailHandler.Mail.DEACTIVATE).start();
 				object.addProperty(STATUS, true);
-				object.addProperty(MESSAGE, "A deactivation link has been sent to your email account " + user.getEmail());
+				object.addProperty(MESSAGE, "a deactivation link has been sent to your email account " + user.getEmail());
 				return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
 			} else {
-				object.addProperty(MESSAGE, "User's account has been already deactivated");
+				object.addProperty(MESSAGE, "user's account has been already deactivated");
 				return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
 			}			
 		}		
 	}
 
+	@SuppressWarnings("finally")
 	@RequestMapping(value = "/status", method = RequestMethod.GET)
-	public ResponseEntity<Object> status(@RequestParam String sts, @RequestParam String hsh) {
-		HttpHeaders httpHeaders = new HttpHeaders();		
+	public ResponseEntity<Object> status(@RequestParam String sts, @RequestParam String hsh) {		
+		HttpHeaders httpHeaders = new HttpHeaders();			
 		try {
-			if (hsh != null && !hsh.trim().equals("")) {
-				User user = userService.getUser(Integer.parseInt(Base64Utils.decrypt(URLDecoder.decode(hsh.trim(), "UTF-8")
-						.replace(" ", "+")).split("\\-")[0].trim()));
+			httpHeaders.setLocation(new URI(httpServletRequest.getScheme() + "://" + httpServletRequest.getServerName() + ":" 
+					+ httpServletRequest.getServerPort() + httpServletRequest.getContextPath() + "/response/acknowledgement?sts="+sts));
+			if (!hsh.trim().equals("") && !sts.trim().equals("")) {
+				String userId = Base64Utils.decrypt(URLDecoder.decode(hsh.trim(), "UTF-8").replace(" ", "+")).split("\\-")[0].trim();
+				User user = userService.getUser(Integer.parseInt(userId));
 				if (user != null && user.getUserKey() != null && user.getUserKey().equals(hsh.trim())) {					
-					if (sts != null && !sts.trim().equals("")) {
-						Byte status = Byte.parseByte(Base64Utils.decrypt(URLDecoder.decode(sts.trim(), "UTF-8").replace(" ", "+")));
-						user.setStatus(status);
-						user.setUserKey(null);
-						userService.updateUser(user);
-						if (String.valueOf(status).equals(DEACTIVATE) || String.valueOf(status).equals(BLOCKED))
-							sessionService.deleteSessions(user.getUserId());
-					}
-				} else {
-					Log.e("Confirmation link has been expired!");
+					Byte status = Byte.parseByte(Base64Utils.decrypt(URLDecoder.decode(sts.trim(), "UTF-8").replace(" ", "+")));
+					user.setStatus(status);
+					user.setUserKey(null);
+					userService.updateUser(user);
 				}
-			}
-			if (httpServletRequest != null)
-				httpHeaders.setLocation(new URI(httpServletRequest.getScheme() + "://" + httpServletRequest.getServerName() + ":" 
-						+ httpServletRequest.getServerPort() + httpServletRequest.getContextPath() + "/"));
+			}			
 		} catch (URISyntaxException e) {
-			e.printStackTrace();
+			e.printStackTrace(); 
 		} catch (Exception e) {
 			e.printStackTrace();
+		} finally {
+			return new ResponseEntity<>(httpHeaders, HttpStatus.SEE_OTHER);	
 		}
-		return new ResponseEntity<>(httpHeaders, HttpStatus.SEE_OTHER);		
 	}
 
 	@RequestMapping(value = "/update", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -278,7 +274,7 @@ public class AuthRestController {
 					updatable.remove(key);
 				}
 			}
-			
+
 			if (updatable.size() > 0) {
 				userService.updateUser(user);
 				String params = updatable.keySet().toString();
@@ -294,6 +290,7 @@ public class AuthRestController {
 		return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);		
 	}
 
+	//ISSUE : Token filter not applied here
 	@SuppressWarnings("finally")
 	@RequestMapping(value = "/image", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<String> image(@RequestParam String userId, @RequestParam("image") MultipartFile image) {
@@ -326,7 +323,7 @@ public class AuthRestController {
 			return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
 		}
 	}
-	
+
 	@RequestMapping(value = "/password", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<String> password(@RequestParam String userId, @RequestParam String oldPassword, @RequestParam String newPassword) {		
 		JsonObject object = new JsonObject();

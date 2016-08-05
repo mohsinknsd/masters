@@ -39,7 +39,8 @@ public class TokenFilter implements Filter {
 		if (resource.equals("masters/auth/login") 
 				|| resource.equals("masters/auth/status")
 				|| resource.equals("masters/auth/image")
-				|| resource.equals("masters/auth/register")) {
+				|| resource.equals("masters/auth/register")
+				|| resource.equals("masters/response/acknowledgement")) {
 			Log.d("Approching " + resource + " without token & user id");
 			chain.doFilter(req, res);
 		} else {
