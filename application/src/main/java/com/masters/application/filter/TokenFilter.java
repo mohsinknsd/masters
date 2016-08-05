@@ -46,8 +46,7 @@ public class TokenFilter implements Filter {
 			String token = request.getHeader("Authorization");
 			String userId = req.getParameter("userId");			
 			Log.d("Approching " + resource + " with token " + token + " and user id " + userId);
-			if (token != null && !token.trim().equals("") && userId != null && !userId.trim().equals("")) {
-				//BUG : If passed userId do not have any session then exception occurs
+			if (token != null && !token.trim().equals("") && userId != null && !userId.trim().equals("")) {				
 				List<Session> sessions = sessionService.getSessions(Integer.parseInt(req.getParameter("userId")));				
 				for (Session session : sessions)
 					if (session.getToken().equalsIgnoreCase(token)) {

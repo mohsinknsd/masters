@@ -21,4 +21,7 @@ Listing most common features of the authorization server application as followin
     	 c) Service mapping
     	 	 (i) User wise
     	 	 (ii) Role wise
+    8. Mysql event schedulers
+    	a) To expire sessions in sessions table
+    	b) To expire userKey in users table
     

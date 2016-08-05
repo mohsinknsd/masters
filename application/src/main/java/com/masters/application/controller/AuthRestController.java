@@ -142,15 +142,15 @@ public class AuthRestController {
 	@RequestMapping(value = "/register", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<String> register(@RequestParam HashMap<String, String> map, @RequestParam(value="image", required=false) MultipartFile image) {
 		JsonObject object = new JsonObject();
-		object.addProperty(STATUS, false);
-		User user = new User(map);
-		user.setRole(roleService.getRole(map.get("role")));
-		SimpleEntry<Boolean, String> result = FieldValidator.validate(user, FIELDS);
+		object.addProperty(STATUS, false);		
+		SimpleEntry<Boolean, String> result = FieldValidator.validate(map, FIELDS);
 		if (!result.getKey()) {			
 			object.addProperty(MESSAGE, result.getValue());
 			return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
 		} else {
 			try {
+				User user = new User(map);
+				user.setRole(roleService.getRole(map.get("role")));
 				if (image != null) {
 					Map<String, String> config = new HashMap<String, String>();
 					config.put("cloud_name", environment.getRequiredProperty("cloud_name"));
@@ -179,7 +179,7 @@ public class AuthRestController {
 			} catch (Exception e) {
 				e.printStackTrace();
 				object.addProperty(MESSAGE, e instanceof MySQLIntegrityConstraintViolationException  ||
-						e instanceof ConstraintViolationException ? "User is already registered with " + user.getEmail() 
+						e instanceof ConstraintViolationException ? "User is already registered with " + map.get("email") 
 								: "Unable to register user. Please try again");
 				return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
 			}
@@ -330,9 +330,10 @@ public class AuthRestController {
 	@RequestMapping(value = "/password", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<String> password(@RequestParam String userId, @RequestParam String oldPassword, @RequestParam String newPassword) {		
 		JsonObject object = new JsonObject();
-		object.addProperty(STATUS, false);		
+		object.addProperty(STATUS, false);
+		String encrypted = DigestUtils.md5DigestAsHex(oldPassword.getBytes());
 		User user = userService.getUser(Integer.parseInt(userId));
-		if (user != null && user.getPassword().equals(DigestUtils.md5DigestAsHex(oldPassword.getBytes()))) {
+		if (user != null && user.getPassword().equals(encrypted)) {
 			user.setPassword(newPassword);
 			userService.updateUser(user);
 			sessionService.deleteSessions(user.getUserId());

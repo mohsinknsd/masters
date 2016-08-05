@@ -182,7 +182,7 @@ public class User {
 		return password;
 	}
 
-	public void setPassword(String password) {
+	public void setPassword(String password) {		
 		this.password = DigestUtils.md5DigestAsHex(password.getBytes());
 	}
 

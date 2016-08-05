@@ -11,8 +11,8 @@ public class FieldValidator {
 				Field f = object.getClass().getDeclaredField(s.trim());
 				f.setAccessible(true);
 				if (f != null) 
-					if (f.get(object) == null)
-						return new SimpleEntry<Boolean, String>(false, f.getName() + " can not be null or empty");							
+					if (f.get(object) == null || f.get(object).toString().trim().equals(""))
+						return new SimpleEntry<Boolean, String>(false, f.getName() + " can not be null or empty");
 			} catch (NoSuchFieldException e) {
 				e.printStackTrace();			
 				return new SimpleEntry<Boolean, String>(false, "An exception has been occured while parsing");
