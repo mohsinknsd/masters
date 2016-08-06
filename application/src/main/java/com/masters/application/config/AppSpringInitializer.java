@@ -8,7 +8,7 @@ import com.masters.application.filter.TokenFilter;
 
 public class AppSpringInitializer extends AbstractAnnotationConfigDispatcherServletInitializer {
 	@Override
-    protected Class<?>[] getRootConfigClasses() {		
+    protected Class<?>[] getRootConfigClasses() {
         return new Class[] { AppSpringConfiguration.class };
     }
   

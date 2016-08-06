@@ -11,15 +11,15 @@ import org.springframework.web.bind.annotation.RequestParam;
 import com.masters.utilities.encryption.Base64Utils;
 
 @Controller
-@RequestMapping("/response")
+@RequestMapping("/app/response")
 public class ResponseController {
 	
 	@RequestMapping(value = "/acknowledgement",  method = RequestMethod.GET)
 	public String acknowledgement(@RequestParam("sts") String sts, ModelMap model) {		
 		try {
 			sts = Base64Utils.decrypt(URLDecoder.decode(sts, "UTF-8").replace(" ", "+"));			
-			model.addAttribute("msg", sts.equals(AuthRestController.ACTIVATE) ? "Your account has been activated!" : 
-				sts.equals(AuthRestController.DEACTIVATE) ? "Your account has been deactivated!" : "Something's getting wrong!");
+			model.addAttribute("msg", sts.equals(AuthRestController.activated.getStatusId()) ? "Your account has been activated!" : 
+				sts.equals(AuthRestController.deactivated.getStatusId()) ? "Your account has been deactivated!" : "Something's getting wrong!");
 		} catch (Exception e) {			
 			model.addAttribute("msg", e.getMessage());
 		}

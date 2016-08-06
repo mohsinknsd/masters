@@ -36,11 +36,13 @@ public class TokenFilter implements Filter {
 		HttpServletRequest request = (HttpServletRequest) req;
 		String resource = request.getRequestURI().substring(1);
 		
-		if (resource.equals("masters/auth/login") 
-				|| resource.equals("masters/auth/status")
-				|| resource.equals("masters/auth/image")
-				|| resource.equals("masters/auth/register")
-				|| resource.equals("masters/response/acknowledgement")) {
+		//ISSUE: Don't allow image and status requests without token
+		if (resource.contains("masters/app/response")) {
+			chain.doFilter(req, res);
+		} else if (resource.equals("masters/auth/apis/login") 
+				|| resource.equals("masters/auth/apis/status")
+				|| resource.equals("masters/auth/apis/image")
+				|| resource.equals("masters/auth/apis/register")) {
 			Log.d("Approching " + resource + " without token & user id");
 			chain.doFilter(req, res);
 		} else {

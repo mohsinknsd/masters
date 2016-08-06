@@ -22,7 +22,7 @@ import com.masters.application.service.WordService;
 
 
 @RestController
-@RequestMapping(value = "/apis")
+@RequestMapping(value = "/app/apis")
 public class WordsRestController {
 
 	@Autowired

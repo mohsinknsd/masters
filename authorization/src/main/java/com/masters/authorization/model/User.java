@@ -87,8 +87,9 @@ public class User {
 	@Column(name = "custom", nullable = true)
 	private String custom;
 	
-	@Column(name = "status", nullable = false)
-	private byte status;
+	@ManyToOne(optional = false, cascade = CascadeType.ALL)
+    @JoinColumn(name="statusId")
+	private Status status;
 	
 	@ManyToOne(optional = false, cascade = CascadeType.ALL)
     @JoinColumn(name="roleId")
@@ -302,11 +303,11 @@ public class User {
 		this.custom = custom;
 	}
 
-	public byte getStatus() {
+	public Status getStatus() {
 		return status;
 	}
 
-	public void setStatus(byte status) {
+	public void setStatus(Status status) {
 		this.status = status;
 	}
 

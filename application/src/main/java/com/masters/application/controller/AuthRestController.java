@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 
 import org.hibernate.exception.ConstraintViolationException;
@@ -41,10 +42,14 @@ import com.google.gson.JsonObject;
 import com.masters.application.config.MailConfiguration;
 import com.masters.application.mail.ConfirmationMailHandler;
 import com.masters.authorization.model.Session;
+import com.masters.authorization.model.Status;
 import com.masters.authorization.model.User;
 import com.masters.authorization.service.RoleService;
 import com.masters.authorization.service.SessionService;
+import com.masters.authorization.service.StatusService;
 import com.masters.authorization.service.UserService;
+import com.masters.utilities.annotation.AutoBind;
+import com.masters.utilities.annotation.AutoBinder;
 import com.masters.utilities.encryption.Base64Utils;
 import com.masters.utilities.logging.Log;
 import com.masters.utilities.validator.FieldValidator;
@@ -52,31 +57,37 @@ import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationExceptio
 
 
 @RestController
-@RequestMapping(value = "/auth")
+@RequestMapping(value = "/auth/apis")
 public class AuthRestController {
 
 	@Autowired Environment environment;
 	@Autowired UserService userService;
 	@Autowired RoleService roleService;
+	@Autowired StatusService statusService;
 	@Autowired SessionService sessionService;
-	@Autowired HttpServletRequest httpServletRequest;	
-
-	public static final String REGISTERED 	= "0";
-	public static final String ACTIVATE 	= "1";
-	public static final String DEACTIVATE 	= "2";
-	public static final String BLOCKED 		= "3";
+	@Autowired HttpServletRequest httpServletRequest;
+	
+	@AutoBind("title") public static Status registered;
+	@AutoBind("title") public static Status activated;
+	@AutoBind("title") public static Status deactivated;
+	@AutoBind("title") public static Status blocked;
 
 	private static final String [] FIELDS = {"firstname", "lastname", 
-			"role", "email", "password", "gender", "address", "city", "state", "country"};	
-
-	//Initializing GSON
+			"role", "email", "password", "gender", "address", "city", "state", "country"};
+	
 	private static Gson gson; static {
-		gson = new GsonBuilder().setPrettyPrinting().create();
-	}
+		gson = new GsonBuilder().setPrettyPrinting().create();		
+	}	
 
-	//ISSUE : Don't publish role id and status
+	@PostConstruct
+	public void loadStatus() {
+		AutoBinder.init(this, statusService.getAllStatus());
+	}
+	
 	@RequestMapping(value = "/login", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<String> login(@RequestParam HashMap<String, String> map) {
+		Log.e(registered.toString());
+		Log.e(blocked.toString());
 		User user = new User();
 		JsonObject object = new JsonObject();
 		object.addProperty(STATUS, false);
@@ -88,14 +99,14 @@ public class AuthRestController {
 			user = userService.getUser(map.get("key"), map.get("password"));
 			if (user != null && user.getUserId() > 0) {
 				Log.d(user.toString());
-				if (user.getStatus() == Byte.parseByte(BLOCKED)) {
+				if (user.getStatus().equals(blocked)) {
 					object.addProperty(MESSAGE, "blocked user do not have permission to be logged in");
 					return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
-				} else if (user.getStatus() == Byte.parseByte(REGISTERED)) {
+				} else if (user.getStatus().equals(registered)) {
 					object.addProperty(MESSAGE, "please verify your email by clicking on confirmation link sent on your email id " + user.getEmail());
 					return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
-				} else if (user.getStatus() == Byte.parseByte(DEACTIVATE)) {
-					user.setStatus(Byte.parseByte(ACTIVATE));
+				} else if (user.getStatus().equals(deactivated)) {					
+					user.setStatus(activated);
 					userService.updateUser(user);
 				}
 
@@ -114,6 +125,8 @@ public class AuthRestController {
 
 				JsonObject userJson = (JsonObject) gson.toJsonTree(user);
 				userJson.addProperty("token", token);
+				userJson.addProperty("status", user.getStatus().getTitle());
+				userJson.addProperty("role", user.getRole().getAlias());
 				userJson.remove("password");
 				object.add("user", userJson);
 				return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);											
@@ -128,7 +141,6 @@ public class AuthRestController {
 	public ResponseEntity<String> logout(@RequestParam String userId, @RequestParam String trace) {
 		JsonObject object = new JsonObject();
 		object.addProperty(STATUS, true);
-
 		Session session = sessionService.getSession(Integer.parseInt(userId), trace);		
 		if (session != null) {
 			sessionService.deleteSession(session);
@@ -136,7 +148,6 @@ public class AuthRestController {
 		} else {
 			object.addProperty(MESSAGE, "did not find any opened session for this user");	
 		}
-
 		return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);		
 	}
 
@@ -152,6 +163,7 @@ public class AuthRestController {
 			try {
 				User user = new User(map);
 				user.setRole(roleService.getRole(map.get("role")));
+				user.setStatus(registered);
 				if (image != null) {
 					Map<String, String> config = new HashMap<String, String>();
 					config.put("cloud_name", environment.getRequiredProperty("cloud_name"));
@@ -164,13 +176,14 @@ public class AuthRestController {
 					String url = String.valueOf(cloudinary.uploader().upload(image.getBytes(), ObjectUtils.emptyMap()).get("url"));
 					user.setImage(url);
 				}
-				int userId = userService.insertUser(user);				
+				int userId = userService.insertUser(user);
 				object.addProperty(STATUS, userId > 0);								
 				String key = Base64Utils.encrypt(String.format("%0" + (10 - String.valueOf(userId).length()) 
 						+ "d", 0).replace("0", String.valueOf(userId) + "-").trim()).trim();											
 				String link = httpServletRequest.getScheme() + "://" + httpServletRequest.getServerName() + ":" 
-						+ httpServletRequest.getServerPort() + httpServletRequest.getContextPath() + "/" + "auth/status?sts=" 
-						+ URLEncoder.encode(Base64Utils.encrypt(ACTIVATE), "UTF-8") + "&hsh=" + URLEncoder.encode(key, "UTF-8");				
+						+ httpServletRequest.getServerPort() + httpServletRequest.getContextPath() + "/" + "auth/apis/status?sts=" 
+						+ URLEncoder.encode(Base64Utils.encrypt(String.valueOf(activated.getStatusId())), "UTF-8") 
+						+ "&hsh=" + URLEncoder.encode(key, "UTF-8");				
 				user.setUserKey(key);
 				userService.updateUser(user);
 				new ConfirmationMailHandler(MailConfiguration.class, user.getEmail(),link, ConfirmationMailHandler.Mail.VERIFICATION).start();				
@@ -197,12 +210,13 @@ public class AuthRestController {
 			return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
 		} else {
 			User user = userService.getUser(Integer.parseInt(map.get("userId")));
-			if (user != null && user.getStatus() != Byte.parseByte(DEACTIVATE)) {
+			if (user != null && !user.getStatus().equals(deactivated.getStatusId())) {
 				String key = Base64Utils.encrypt(String.format("%0" + (10 - String.valueOf(user.getUserId()).length()) 
 						+ "d", 0).replace("0", String.valueOf(user.getUserId()) + "-").trim()).trim();
 				String link = httpServletRequest.getScheme() + "://" + httpServletRequest.getServerName() + ":" 
-						+ httpServletRequest.getServerPort() + httpServletRequest.getContextPath() + "/" + "auth/status?sts=" 
-						+ URLEncoder.encode(Base64Utils.encrypt(DEACTIVATE), "UTF-8") + "&hsh=" + URLEncoder.encode(key, "UTF-8");
+						+ httpServletRequest.getServerPort() + httpServletRequest.getContextPath() + "/" + "auth/apis/status?sts=" 
+						+ URLEncoder.encode(Base64Utils.encrypt(String.valueOf(deactivated.getStatusId())), "UTF-8") 
+						+ "&hsh=" + URLEncoder.encode(key, "UTF-8");
 				user.setUserKey(key);
 				userService.updateUser(user);
 				new ConfirmationMailHandler(MailConfiguration.class, user.getEmail(), link, ConfirmationMailHandler.Mail.DEACTIVATE).start();
@@ -222,13 +236,13 @@ public class AuthRestController {
 		HttpHeaders httpHeaders = new HttpHeaders();			
 		try {
 			httpHeaders.setLocation(new URI(httpServletRequest.getScheme() + "://" + httpServletRequest.getServerName() + ":" 
-					+ httpServletRequest.getServerPort() + httpServletRequest.getContextPath() + "/response/acknowledgement?sts="+sts));
+					+ httpServletRequest.getServerPort() + httpServletRequest.getContextPath() + "/app/response/acknowledgement?sts="+sts));
 			if (!hsh.trim().equals("") && !sts.trim().equals("")) {
 				String userId = Base64Utils.decrypt(URLDecoder.decode(hsh.trim(), "UTF-8").replace(" ", "+")).split("\\-")[0].trim();
 				User user = userService.getUser(Integer.parseInt(userId));
 				if (user != null && user.getUserKey() != null && user.getUserKey().equals(hsh.trim())) {					
-					Byte status = Byte.parseByte(Base64Utils.decrypt(URLDecoder.decode(sts.trim(), "UTF-8").replace(" ", "+")));
-					user.setStatus(status);
+					int status = Integer.parseInt((Base64Utils.decrypt(URLDecoder.decode(sts.trim(), "UTF-8").replace(" ", "+"))));
+					user.setStatus(statusService.getStatus(status));
 					user.setUserKey(null);
 					userService.updateUser(user);
 				}
@@ -257,20 +271,16 @@ public class AuthRestController {
 		User user = userService.getUser(Integer.parseInt(userId));
 		if (user != null) {
 			for (String key : new ArrayList<String>(updatable.keySet())) {
-				if (map.keySet().contains(key)) {
-					try {
-						Field field = user.getClass().getDeclaredField(key.trim());							
-						if (field != null && map.get(key) != null && !map.get(key).equals("")) {
-							field.setAccessible(true);
-							field.set(user, map.get(key));
-							updatable.put(key, true);
-						} else {
-							updatable.remove(key);
-						}
-					} catch (Exception e) {
+				try {
+					Field field = user.getClass().getDeclaredField(key.trim());							
+					if (field != null && map.get(key) != null && !map.get(key).trim().equals("")) {
+						field.setAccessible(true);
+						field.set(user, map.get(key));
+						updatable.put(key, true);
+					} else {
 						updatable.remove(key);
 					}
-				} else {
+				} catch (Exception e) {
 					updatable.remove(key);
 				}
 			}
@@ -312,13 +322,13 @@ public class AuthRestController {
 			userService.updateUser(user);
 			object.addProperty(URL, url);
 			object.addProperty(STATUS, true);
-			object.addProperty(MESSAGE, "Successfully updated image on the server");
+			object.addProperty(MESSAGE, "successfully updated image on the server");
 		} catch (NullPointerException e) {
 			e.printStackTrace();
-			object.addProperty(MESSAGE, "Unable to reach to the user with userId " + userId);
+			object.addProperty(MESSAGE, "unable to reach to the user with user id " + userId);
 		} catch (Exception e) {
 			e.printStackTrace();
-			object.addProperty(MESSAGE, "Unable to update image file");
+			object.addProperty(MESSAGE, "unable to update image file");
 		} finally {
 			return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
 		}
