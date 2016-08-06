@@ -98,7 +98,7 @@ CREATE TABLE `roles` (
 
 LOCK TABLES `roles` WRITE;
 /*!40000 ALTER TABLE `roles` DISABLE KEYS */;
-INSERT INTO `roles` VALUES (1,'administrator','Administrator',1),(2,'user','Premium User',1),(3,'guest','Free User',1);
+INSERT INTO `roles` VALUES (1,'administrator','administrator',1),(2,'user','premium user',1),(3,'guest','free user',1);
 /*!40000 ALTER TABLE `roles` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -180,7 +180,7 @@ CREATE TABLE `sessions` (
   PRIMARY KEY (`sessionId`),
   KEY `fk_user_session_key` (`userId`),
   CONSTRAINT `fk_user_session_key` FOREIGN KEY (`userId`) REFERENCES `users` (`userId`)
-) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=43 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -189,8 +189,34 @@ CREATE TABLE `sessions` (
 
 LOCK TABLES `sessions` WRITE;
 /*!40000 ALTER TABLE `sessions` DISABLE KEYS */;
-INSERT INTO `sessions` VALUES (1,2,'Apple Iphone 5c','mobile','new delhi, india','23412342343432',NULL,NULL,'2016-07-29 14:54:52','0000-00-00 00:00:00',1),(3,1,'postman','computer',NULL,'172.20.10.2',NULL,'10fa1326-a45c-4164-ba9f-638b86b00b1f','2016-08-01 23:37:48','2016-08-01 23:54:49',0),(16,23,'Google Chrome','computer',NULL,'198.168.1.84',NULL,'c63acff6-6dcb-4dda-96b4-57160f54ec54','2016-08-02 15:25:23','2016-08-02 15:25:23',0);
+INSERT INTO `sessions` VALUES (1,2,'Apple Iphone 5c','mobile','new delhi, india','23412342343432',NULL,'8f57f216-7f4c-4328-81d5-32b426df8489','2016-07-29 14:54:52','2016-07-29 14:54:52',1),(32,1,'Google Chrome','computer',NULL,'198.168.1.84',NULL,'ddf58e45-9c54-4632-9ea5-996fb2230fa9','2016-08-05 14:52:50','2016-08-06 12:01:02',1),(42,30,'Google Chrome','computer',NULL,'198.168.1.84',NULL,'0c3a518f-54fd-46c2-98a1-f70fb0e721f6','2016-08-06 18:06:13','2016-08-06 18:25:58',1);
 /*!40000 ALTER TABLE `sessions` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `status`
+--
+
+DROP TABLE IF EXISTS `status`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `status` (
+  `statusId` tinyint(2) NOT NULL AUTO_INCREMENT,
+  `title` varchar(45) NOT NULL,
+  `description` text NOT NULL,
+  `message` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`statusId`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=latin1 COMMENT='These status can only be applied to users table';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `status`
+--
+
+LOCK TABLES `status` WRITE;
+/*!40000 ALTER TABLE `status` DISABLE KEYS */;
+INSERT INTO `status` VALUES (1,'registered','user did not complete the registration process including verification',NULL),(2,'activated','it is active user that can use all services listed in services/access/permissions table','your account has been activated now'),(3,'deactivated','user will not be able to access services provided by the application untill re-activation','your account has been deactivated now'),(4,'blocked','user can not touch anything in the system if blocked','your account has been blocked by the administration');
+/*!40000 ALTER TABLE `status` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -224,13 +250,15 @@ CREATE TABLE `users` (
   `userKey` text COMMENT 'To store hashes or temporary security tokens',
   `registeredOn` datetime DEFAULT NULL COMMENT 'Registration Date',
   `custom` varchar(45) DEFAULT NULL COMMENT 'Additional column to observe any immediate change in the  table',
-  `status` tinyint(2) DEFAULT '0' COMMENT 'If user is not verified using confirmation mail or mobile OTP then status will be 0. If status is 1 then user is verified and active.',
+  `statusId` tinyint(2) NOT NULL,
   PRIMARY KEY (`userId`),
   UNIQUE KEY `unique_user_email` (`email`),
   UNIQUE KEY `unique_user_username` (`username`),
   KEY `fk_user_role_key` (`roleId`),
+  KEY `fk_user_status_key_idx` (`statusId`),
+  CONSTRAINT `fk_user_status_key` FOREIGN KEY (`statusId`) REFERENCES `status` (`statusId`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   CONSTRAINT `fk_user_role_key` FOREIGN KEY (`roleId`) REFERENCES `roles` (`roleId`)
-) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=32 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -239,7 +267,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,1,'mohsinkhan','mohsin',NULL,'khan','http://www.photogallary.com/images/khan.jpg','khan.square@gmail.com','21232f297a57a5a743894a0e4a801fc3','',NULL,'9166071660',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'2016-07-20 18:18:51',NULL,0),(2,2,'akshayarora','akshay',NULL,'arora','http://www.photogallary.com/images/akshay.jpg','akshay@gmail.com','ee11cbb19052e40b07aac0ca060c23ee','',NULL,'9828132710',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'2016-07-20 18:20:56',NULL,0),(3,2,'preetamsingh','preetam',NULL,'signh','http://www.photogallary.com/images/preetam.jpg','preetam@gmail.com','ee11cbb19052e40b07aac0ca060c23ee','',NULL,'9214615644',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'2016-07-20 18:22:30',NULL,0),(4,3,'vikassaraswat','vikas',NULL,'saraswat','http://www.photogallary.com/images/vikas.jpg','vikas@yahoo.com','084e0343a0486ff05530df6c705c8bb4','',NULL,'7737235548',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'2016-07-20 18:22:33',NULL,0),(5,2,'AshishVerma','Ashish',NULL,'Verma',NULL,'ashish@gmail.com','user','',NULL,'9001444323',NULL,'Dari mohalla','nasirabad',NULL,'rajasthan','india',NULL,NULL,NULL,'2016-07-28 23:41:40',NULL,0),(6,2,'AshokMeena','Ashok',NULL,'Meena',NULL,'ashok.meena@gmail.com','user','',NULL,'9001444323',NULL,'Dari mohalla','nasirabad',NULL,'rajasthan','india',NULL,NULL,NULL,'2016-07-30 00:09:59',NULL,0),(7,2,'BajiraoSingham','Bajirao',NULL,'Singham',NULL,'bajirao@gmail.com','ee11cbb19052e40b07aac0ca060c23ee','',NULL,'1122334455',NULL,'blah blah','city name',NULL,'state name','country name',NULL,NULL,NULL,'2016-07-30 23:15:26',NULL,0),(19,2,'DigvijaySingh','Digvijay',NULL,'Singh',NULL,'khan_square@yahoo.com','ee11cbb19052e40b07aac0ca060c23ee','',NULL,'1122334455',NULL,'blah blah','city name',NULL,'state name','country name',NULL,NULL,NULL,'2016-07-31 15:45:10',NULL,0),(23,2,'rahulkumawat','rahul',NULL,'kumawat','http://ichef-1.bbci.co.uk/news/660/cpsprodpb/025B/production/_85730600_monkey2.jpg','parasme.rahul@gmail.com','ee11cbb19052e40b07aac0ca060c23ee','',NULL,'7737772424',NULL,'joshi marg','jhotwara','jaipur','rajasthan','india',NULL,NULL,'L7AZzFzxCmTESKRwilAijGSm5UNdr0Xp4deR3FIaIec=','2016-08-02 13:26:59',NULL,2);
+INSERT INTO `users` VALUES (1,1,'mohsinkhan','mohsin',NULL,'khan','http://res.cloudinary.com/jmonster/image/upload/v1470314646/ifjlvbah2sf58abnzwag.png','khan.square@gmail.com','21232f297a57a5a743894a0e4a801fc3','',NULL,'9166071660',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'2016-07-20 18:18:51',NULL,2),(2,2,'akshayarora','akshay',NULL,'arora','http://www.photogallary.com/images/akshay.jpg','akshay@gmail.com','ee11cbb19052e40b07aac0ca060c23ee','',NULL,'9828132710',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'2016-07-20 18:20:56',NULL,1),(3,2,'preetamsingh','preetam',NULL,'signh','http://www.photogallary.com/images/preetam.jpg','preetam@gmail.com','ee11cbb19052e40b07aac0ca060c23ee','',NULL,'9214615644',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'2016-07-20 18:22:30',NULL,1),(4,3,'vikassaraswat','vikas',NULL,'saraswat','http://www.photogallary.com/images/vikas.jpg','vikas@yahoo.com','084e0343a0486ff05530df6c705c8bb4','',NULL,'7737235548',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'2016-07-20 18:22:33',NULL,1),(5,2,'AshishVerma','Ashish',NULL,'Verma',NULL,'ashish@gmail.com','user','',NULL,'9001444323',NULL,'Dari mohalla','nasirabad',NULL,'rajasthan','india',NULL,NULL,NULL,'2016-07-28 23:41:40',NULL,1),(6,2,'AshokMeena','Ashok',NULL,'Meena',NULL,'ashok.meena@gmail.com','user','',NULL,'9001444323',NULL,'Dari mohalla','nasirabad',NULL,'rajasthan','india',NULL,NULL,NULL,'2016-07-30 00:09:59',NULL,1),(7,2,'BajiraoSingham','Bajirao',NULL,'Singham',NULL,'bajirao@gmail.com','ee11cbb19052e40b07aac0ca060c23ee','',NULL,'1122334455',NULL,'blah blah','city name',NULL,'state name','country name',NULL,NULL,NULL,'2016-07-30 23:15:26',NULL,1),(19,2,'DigvijaySingh','Digvijay',NULL,'Singh',NULL,'khan_square@yahoo.com','ee11cbb19052e40b07aac0ca060c23ee','',NULL,'11222334455',NULL,'blah blah','city name',NULL,'state name','country name',NULL,NULL,NULL,'2016-07-31 15:45:10',NULL,2),(23,2,'rahulkumawat','rahul',NULL,'kumawat','http://res.cloudinary.com/jmonster/image/upload/v1470315066/ozwqievogv4rsrcnjxfm.png','parasme.rahul@gmail.com','ee11cbb19052e40b07aac0ca060c23ee','',NULL,'7737772424',NULL,'kamino ka mohalla','jhotwara','jaipur','rajasthan','india',NULL,NULL,'L7AZzFzxCmTESKRwilAijGSm5UNdr0Xp4deR3FIaIec=','2016-08-02 13:26:59',NULL,2),(30,2,'jmonsterindia','jmonster',NULL,'india','http://res.cloudinary.com/jmonster/image/upload/v1470486970/oboegvle4wmvvxo8y7a0.png','jmonster.india@gmail.com','ee11cbb19052e40b07aac0ca060c23ee','',NULL,'9694262311',NULL,'chitrakoot stadium','jaipur','jaipur','rajasthan','india',NULL,NULL,NULL,'2016-08-06 17:51:25',NULL,2);
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -294,4 +322,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2016-08-02 15:38:15
+-- Dump completed on 2016-08-06 18:43:24
