@@ -9,18 +9,22 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import com.masters.utilities.encryption.Base64Utils;
+import com.masters.utilities.logging.Log;
 
 @Controller
 @RequestMapping("/app/response")
 public class ResponseController {
 	
 	@RequestMapping(value = "/acknowledgement",  method = RequestMethod.GET)
-	public String acknowledgement(@RequestParam("sts") String sts, ModelMap model) {		
+	public String acknowledgement(@RequestParam("message") String message, ModelMap model) {			
 		try {
-			sts = Base64Utils.decrypt(URLDecoder.decode(sts, "UTF-8").replace(" ", "+"));			
-			model.addAttribute("msg", sts.equals(AuthRestController.activated.getStatusId()) ? "Your account has been activated!" : 
-				sts.equals(AuthRestController.deactivated.getStatusId()) ? "Your account has been deactivated!" : "Something's getting wrong!");
-		} catch (Exception e) {			
+			String dec = Base64Utils.decrypt(message);
+			Log.e(dec);			
+			String decoded = URLDecoder.decode(dec, "UTF-8");
+			Log.e(decoded);
+			model.addAttribute("msg", decoded);
+		} catch (Exception e) {
+			Log.e(e);
 			model.addAttribute("msg", e.getMessage());
 		}
 		return "acknowledgement";

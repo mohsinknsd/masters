@@ -24,6 +24,16 @@ public class Status {
 	
 	@Column(name = "message", nullable = true)
 	private String message;
+	public Status () {
+		super();
+	}
+	public Status(int statusId, String title, String description, String message) {
+		super();
+		this.statusId = statusId;
+		this.title = title;
+		this.description = description;
+		this.message = message;
+	}
 
 	public int getStatusId() {
 		return statusId;
