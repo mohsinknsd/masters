@@ -45,7 +45,6 @@
 						<classesClassifier>classes</classesClassifier>
 						<failOnMissingWebXml>false</failOnMissingWebXml>
 					</configuration>
-
 				</plugin>
 				<plugin>
 					<artifactId>maven-compiler-plugin</artifactId>
@@ -169,6 +168,7 @@
 			<version>1.4.2</version>
 		</dependency>
 	</dependencies>
+	
 	<modules>
 		<module>utilities</module>
 		<module>authorization</module>

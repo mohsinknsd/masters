@@ -6,7 +6,6 @@ import static com.masters.application.model.Constants.URL;
 
 import java.lang.reflect.Field;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.AbstractMap.SimpleEntry;
@@ -27,7 +26,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.ui.ModelMap;
 import org.springframework.util.DigestUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -57,7 +55,6 @@ import com.masters.utilities.logging.Log;
 import com.masters.utilities.validator.FieldValidator;
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException;
 
-
 @RestController
 @RequestMapping(value = "/auth/apis")
 public class AuthRestController {
@@ -68,7 +65,6 @@ public class AuthRestController {
 	@Autowired StatusService statusService;
 	@Autowired SessionService sessionService;
 	@Autowired ApplicationContext context;
-	//@Autowired HttpServletRequest httpServletRequest;	
 	
 	@AutoBind("title") public static Status registered;
 	@AutoBind("title") public static Status activated;
@@ -90,7 +86,7 @@ public class AuthRestController {
 	}
 	
 	@RequestMapping(value = "/login", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<String> login(@RequestParam HashMap<String, String> map) {
+	public ResponseEntity<String> login(@RequestParam HashMap<String, String> map) {		
 		User user = new User();
 		JsonObject object = new JsonObject();
 		object.addProperty(STATUS, false);
@@ -166,6 +162,7 @@ public class AuthRestController {
 				User user = new User(map);
 				user.setRole(roleService.getRole(map.get("role")));
 				user.setStatus(registered);
+				user.setUsername(user.getUsername() + (userService.getUserCount(user.getFirstname(), user.getLastname()) + 1));
 				if (image != null) {
 					Map<String, String> config = new HashMap<String, String>();
 					config.put("cloud_name", environment.getRequiredProperty("cloud_name"));
@@ -231,7 +228,7 @@ public class AuthRestController {
 
 	@SuppressWarnings("finally")
 	@RequestMapping(value = "/status", method = RequestMethod.GET)
-	public ResponseEntity<?> status(@RequestParam String sts, @RequestParam String hsh, ModelMap model) {		
+	public ResponseEntity<Status> status(@RequestParam String sts, @RequestParam String hsh) {		
 		HttpHeaders httpHeaders = new HttpHeaders();			
 		Status status = new Status(0, "undefined", "any status that does not exists in the system", "something's getting wrong");
 		try {			
@@ -246,62 +243,65 @@ public class AuthRestController {
 					userService.updateUser(user);					
 				}
 			}			
-			/*httpHeaders.setLocation(new URI(environment.getRequiredProperty("application.domain") 
-					+ "app/response/acknowledgement?message=" + URLEncoder.encode(Base64Utils.encrypt(status.getMessage()), "UTF-8")));*/
-			httpHeaders.setLocation(new URI(environment.getRequiredProperty("application.domain") + "app/response/acknowledgement"));
-		} catch (URISyntaxException e) {
-			Log.e(e); 
+			httpHeaders.setLocation(new URI(environment.getRequiredProperty("application.domain") 
+					+ "app/response/acknowledgement?message=" + URLEncoder.encode(Base64Utils.encrypt(status.getMessage()), "UTF-8")));			
 		} catch (Exception e) {
 			Log.e(e);
 		} finally {
-			return new ResponseEntity<>(status.getMessage(), httpHeaders, HttpStatus.SEE_OTHER);	
+			return new ResponseEntity<Status>(status, httpHeaders, HttpStatus.SEE_OTHER);	
 		}
 	}
 
 	@RequestMapping(value = "/update", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<String> update(@RequestParam HashMap<String, String> map) {
-		Map<String, Boolean> updatable = new HashMap<String, Boolean>();		
+		Map<String, Boolean> updatable = new HashMap<String, Boolean>();
+		updatable.put("firstname", false);
+		updatable.put("middlename", false);
+		updatable.put("lastname", false);
 		updatable.put("mobile", false);
 		updatable.put("address", false);
 		updatable.put("city", false);
 		updatable.put("state", false);
-		updatable.put("country", false);
+		updatable.put("country", false);		
 
 		JsonObject object = new JsonObject();
 		object.addProperty(STATUS, false);
 		String userId = map.get("userId");
 		User user = userService.getUser(Integer.parseInt(userId));
-		if (user != null) {
-			for (String key : new ArrayList<String>(updatable.keySet())) {
-				try {
-					Field field = user.getClass().getDeclaredField(key.trim());							
-					if (field != null && map.get(key) != null && !map.get(key).trim().equals("")) {
-						field.setAccessible(true);
-						field.set(user, map.get(key));
-						updatable.put(key, true);
-					} else {
-						updatable.remove(key);
-					}
-				} catch (Exception e) {
+
+		for (String key : new ArrayList<String>(updatable.keySet())) {
+			try {
+				Field field = user.getClass().getDeclaredField(key.trim());							
+				if (field != null && map.get(key) != null && !map.get(key).trim().equals("")) {
+					field.setAccessible(true);
+					field.set(user, map.get(key));
+					updatable.put(key, true);
+				} else {
 					updatable.remove(key);
 				}
+			} catch (Exception e) {
+				updatable.remove(key);
 			}
+		}
 
-			if (updatable.size() > 0) {
-				userService.updateUser(user);
-				String params = updatable.keySet().toString();
-				object.addProperty(STATUS, true);						
-				object.addProperty(MESSAGE, updatable.size() > 1 
-						? context.getMessage("update.single", new String[]{params.substring(1, params.length() - 1)}, l)
-						: context.getMessage("update.multiple", new String[]{params.substring(1, params.length() - 1)}, l));
-			} else {
-				object.addProperty(MESSAGE, context.getMessage("update.failed", null, l));
+		if (updatable.size() > 0) {
+			if (updatable.containsKey("firstname") || updatable.containsKey("lastname")) {
+				user.setUsername(user.getFirstname() + user.getLastname() + 
+						userService.getUserCount(user.getFirstname(), user.getLastname()));				
 			}
+			userService.updateUser(user);
+			String params = updatable.keySet().toString();
+			object.addProperty(STATUS, true);
+			object.addProperty(MESSAGE, updatable.size() > 1 
+					? context.getMessage("update.multiple", new String[]{params.substring(1, params.length() - 1)}, l)
+					: context.getMessage("update.single", new String[]{params.substring(1, params.length() - 1)}, l));
 		} else {
-			object.addProperty(MESSAGE, context.getMessage("user.not.found", new String[]{ userId}, l));
-		}			
+			object.addProperty(MESSAGE, context.getMessage("update.failed", null, l));
+		}
+		
 		return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);		
 	}
+	
 
 	//ISSUE : Token filter not applied here
 	@SuppressWarnings("finally")
@@ -336,6 +336,7 @@ public class AuthRestController {
 			return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
 		}
 	}
+	
 
 	@RequestMapping(value = "/password", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<String> password(@RequestParam String userId, @RequestParam String oldPassword, @RequestParam String newPassword) {		

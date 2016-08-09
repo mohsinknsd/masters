@@ -3,6 +3,7 @@ package com.masters.authorization.dao;
 import java.util.List;
 
 import org.hibernate.Criteria;
+import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.DigestUtils;
@@ -33,7 +34,7 @@ public class UserDaoImpl extends AbstractDao implements UserDao {
 	@Override
 	public User getUser(String key, String password) {
 		Criteria criteria = getSession().createCriteria(User.class);
-		criteria.add(key.contains("@") ? Restrictions.eq("email", key) : Restrictions.eq("username", key));
+		criteria.add(Restrictions.eq(key.contains("@") ? "email" : "username", key));
 		criteria.add(Restrictions.eq("password", DigestUtils.md5DigestAsHex(password.getBytes())));
 		return (User) criteria.uniqueResult();
 	}
@@ -50,5 +51,14 @@ public class UserDaoImpl extends AbstractDao implements UserDao {
 	public List<User> getAllUsers() {
 		Criteria criteria = getSession().createCriteria(User.class);
 		return criteria.list();
+	}
+
+	@Override
+	public int getUserCount(String firstname, String lastname) {
+		Criteria criteria = getSession().createCriteria(User.class);
+		criteria.setProjection(Projections.rowCount());		
+		criteria.add(Restrictions.eq("firstname", firstname));
+		criteria.add(Restrictions.eq("lastname", lastname));
+		return ((Number) criteria.uniqueResult()).intValue();
 	}
 }

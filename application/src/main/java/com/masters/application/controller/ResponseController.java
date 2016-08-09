@@ -11,22 +11,25 @@ import org.springframework.web.bind.annotation.RequestParam;
 import com.masters.utilities.encryption.Base64Utils;
 import com.masters.utilities.logging.Log;
 
-@Controller
-@RequestMapping("/app/response")
-public class ResponseController {
-	
-	@RequestMapping(value = "/acknowledgement",  method = RequestMethod.GET)
-	public String acknowledgement(@RequestParam("message") String message, ModelMap model) {			
-		try {
-			String dec = Base64Utils.decrypt(message);
-			Log.e(dec);			
-			String decoded = URLDecoder.decode(dec, "UTF-8");
-			Log.e(decoded);
-			model.addAttribute("msg", decoded);
-		} catch (Exception e) {
-			Log.e(e);
-			model.addAttribute("msg", e.getMessage());
+	@Controller
+	@RequestMapping("/app/response")
+	public class ResponseController {
+		
+		@RequestMapping(value = "/acknowledgement",  method = RequestMethod.GET)
+		public String acknowledgement(@RequestParam("message") String message, ModelMap model) {			
+			try {
+				
+				Log.e("Getting status");
+				//Log.e(request.getBody().toString());
+				String dec = Base64Utils.decrypt(message);
+				Log.e(dec);			
+				String decoded = URLDecoder.decode(dec, "UTF-8");
+				Log.e(decoded);
+				model.addAttribute("msg", decoded);
+			} catch (Exception e) {
+				Log.e(e);
+				model.addAttribute("msg", e.getMessage());
+			}
+			return "acknowledgement";
 		}
-		return "acknowledgement";
 	}
-}

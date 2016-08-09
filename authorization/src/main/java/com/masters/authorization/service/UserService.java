@@ -12,4 +12,5 @@ public interface UserService {
 	User getUser(String key, String password);
 	User getUser(String username);
 	List<User> getAllUsers();
+	int getUserCount(String firstname, String lastname);
 }

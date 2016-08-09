@@ -102,7 +102,7 @@ public class User {
 	}
 	
 	public User(HashMap<String, String> map) {		
-		this.setUsername(map.get("firstname") + map.get("lastname"));
+		this.setUsername(map.get("firstname") + (map.get("lastname") != null ? map.get("lastname") : ""));
 		this.setFirstname(map.get("firstname"));
 		this.setMiddlename(map.get("middlename"));
 		this.setLastname(map.get("lastname"));
