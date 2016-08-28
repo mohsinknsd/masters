@@ -13,7 +13,7 @@ import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationExceptio
 public class StatusDaoImpl extends AbstractDao implements StatusDao {	
 
 	@Override
-	public int insertRole(Status status) throws MySQLIntegrityConstraintViolationException {
+	public int insertStatus(Status status) throws MySQLIntegrityConstraintViolationException {
 		return save(status);
 	}
 

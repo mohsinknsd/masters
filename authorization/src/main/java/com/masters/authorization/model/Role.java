@@ -23,7 +23,18 @@ public class Role {
 	private String alias;
 	
 	@Column(name = "status", nullable = false)
-	private byte status;
+	private byte status;	
+
+	public Role() {
+		super();	
+	}
+	
+	public Role(String title, String alias) {
+		super();
+		this.title = title;
+		this.alias = alias;
+		this.status = 1;
+	}
 
 	public int getRoleId() {
 		return roleId;

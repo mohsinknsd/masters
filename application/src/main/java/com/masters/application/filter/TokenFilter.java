@@ -39,10 +39,10 @@ public class TokenFilter implements Filter {
 		//ISSUE: Don't allow image and status requests without token
 		if (resource.contains("masters/app/response")) {
 			chain.doFilter(req, res);
-		} else if (resource.equals("masters/auth/apis/login") 
+		} else if (resource.equals("masters/auth/apis/login")
 				|| resource.equals("masters/auth/apis/status")
 				|| resource.equals("masters/auth/apis/image")
-				|| resource.equals("masters/auth/apis/register")) {
+				|| resource.equals("masters/auth/apis/register/user")) {
 			Log.d("Approching " + resource + " without token & user id");
 			chain.doFilter(req, res);
 		} else {

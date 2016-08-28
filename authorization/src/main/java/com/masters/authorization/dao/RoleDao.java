@@ -9,5 +9,6 @@ public interface RoleDao {
 	int insertRole(Role role) throws MySQLIntegrityConstraintViolationException;
 	Role getRole(String title);
 	Role getRole(int roleId);
+	void updateRole(Role role);
 	List<Role> getAllRoles();
 }

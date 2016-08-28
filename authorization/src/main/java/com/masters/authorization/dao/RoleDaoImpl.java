@@ -32,9 +32,14 @@ public class RoleDaoImpl extends AbstractDao implements RoleDao {
 	}
 	
 	@Override
+	public void updateRole(Role role) {	
+		update(role);
+	}
+	
+	@Override
 	@SuppressWarnings("unchecked")
 	public List<Role> getAllRoles() {
 		Criteria criteria = getSession().createCriteria(Role.class);
 		return criteria.list();
-	}
+	}	
 }

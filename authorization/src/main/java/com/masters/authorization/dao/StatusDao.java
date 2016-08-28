@@ -6,7 +6,7 @@ import com.masters.authorization.model.Status;
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException;
 
 public interface StatusDao {
-	int insertRole(Status status) throws MySQLIntegrityConstraintViolationException;	
+	int insertStatus(Status status) throws MySQLIntegrityConstraintViolationException;	
 	Status getStatus(int statusId);
 	List<Status> getAllStatus();
 }

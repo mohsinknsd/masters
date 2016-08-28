@@ -18,8 +18,8 @@ public class StatusServiceImpl implements StatusService {
 	private StatusDao statusDao;
 
 	@Override
-	public int insertRole(Status status) throws MySQLIntegrityConstraintViolationException {
-		return statusDao.insertRole(status);
+	public int insertStatus(Status status) throws MySQLIntegrityConstraintViolationException {
+		return statusDao.insertStatus(status);
 	}
 
 	@Override
