@@ -8,13 +8,13 @@ import javax.persistence.Id;
 import javax.persistence.Table;
 
 @Entity
-@Table(name="service")
-public class Service {
+@Table(name="features")
+public class Feature {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	@Column(name = "serviceId", nullable = false)
-	private int serviceId;
+	@Column(name = "featureId", nullable = false)
+	private int featureId;
 	
 	@Column(name = "name", nullable = false)
 	private String name;
@@ -24,13 +24,24 @@ public class Service {
 	
 	@Column(name = "status", nullable = false)
 	private byte status;
-
-	public int getServiceId() {
-		return serviceId;
+	
+	public Feature() {
+		super();		
 	}
 
-	public void setServiceId(int serviceId) {
-		this.serviceId = serviceId;
+	public Feature(String name, String alias) {
+		super();
+		this.name = name;
+		this.alias = alias;
+		this.status = 1;
+	}
+
+	public int getFeatureId() {
+		return featureId;
+	}
+
+	public void setFeatureId(int featureId) {
+		this.featureId = featureId;
 	}
 
 	public String getName() {
@@ -59,7 +70,7 @@ public class Service {
 
 	@Override
 	public String toString() {
-		return "Service [serviceId=" + serviceId + ", "
+		return "Feature [featureId=" + featureId + ", "
 				+ (name != null ? "name=" + name + ", " : "")
 				+ (alias != null ? "alias=" + alias + ", " : "") + "status="
 				+ status + "]";

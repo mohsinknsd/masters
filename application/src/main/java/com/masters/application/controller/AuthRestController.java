@@ -44,10 +44,13 @@ import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 import com.masters.application.config.MailConfiguration;
 import com.masters.application.mail.ConfirmationMailHandler;
+import com.masters.authorization.model.Feature;
 import com.masters.authorization.model.Role;
 import com.masters.authorization.model.Session;
 import com.masters.authorization.model.Status;
 import com.masters.authorization.model.User;
+import com.masters.authorization.service.FeatureService;
+import com.masters.authorization.service.LicenseService;
 import com.masters.authorization.service.RoleService;
 import com.masters.authorization.service.SessionService;
 import com.masters.authorization.service.StatusService;
@@ -77,6 +80,8 @@ public class AuthRestController {
 	@Autowired UserService userService;
 	@Autowired RoleService roleService;	
 	@Autowired StatusService statusService;
+	@Autowired FeatureService featureService;
+	@Autowired LicenseService licenseService;	
 	@Autowired SessionService sessionService;
 	@Autowired ApplicationContext context;
 
@@ -427,13 +432,12 @@ public class AuthRestController {
 	/********************************************************************************************************************/
 	/********************************************** ROLE MANAGEMENT *****************************************************/
 	/********************************************************************************************************************/
-
-	//ISSUE : update if deativated/reinserting
+	
 	@RequestMapping(value = "/register/role", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<String> registerRole(@RequestParam HashMap<String, String> map) {
 		JsonObject object = new JsonObject();
 		object.addProperty(STATUS, false);
-		SimpleEntry<Boolean, String> result = FieldValidator.validate(map, "userId", "title", "alias");
+		SimpleEntry<Boolean, String> result = FieldValidator.validate(map, "title", "alias");
 		if (!result.getKey()) {
 			object.addProperty(MESSAGE, result.getValue());
 		} else {
@@ -469,12 +473,12 @@ public class AuthRestController {
 	public ResponseEntity<String> getRole(@RequestParam HashMap<String, String> map) {
 		JsonObject object = new JsonObject();
 		object.addProperty(STATUS, false);
-		SimpleEntry<Boolean, String> result = FieldValidator.validate(map, "userId", "roleId");
+		SimpleEntry<Boolean, String> result = FieldValidator.validate(map, "roleId");
 		if (!result.getKey()) {
 			object.addProperty(MESSAGE, result.getValue());
 		} else {
 			User user = userService.getUser(Integer.parseInt(map.get("userId")));
-			if (user.getRole().getTitle().equalsIgnoreCase("administrator")) {
+			if (user.getRole().getTitle().equalsIgnoreCase(ADMINISTRATOR)) {
 				Role role = roleService.getRole(Integer.parseInt(map.get("roleId")));
 				if (role != null) {
 					object.addProperty(STATUS, true);
@@ -494,7 +498,7 @@ public class AuthRestController {
 	public ResponseEntity<String> deactivateRole(@RequestParam HashMap<String, String> map) {
 		JsonObject object = new JsonObject();
 		object.addProperty(STATUS, false);
-		SimpleEntry<Boolean, String> result = FieldValidator.validate(map, "userId", "roleId");
+		SimpleEntry<Boolean, String> result = FieldValidator.validate(map, "roleId");
 		if (!result.getKey()) {
 			object.addProperty(MESSAGE, result.getValue());			
 		} else {
@@ -502,7 +506,7 @@ public class AuthRestController {
 			if (user.getRole().getTitle().equalsIgnoreCase("administrator")) {
 				Role role = roleService.getRole(Integer.parseInt(map.get("roleId")));
 				if (role != null) {
-					if (role.getTitle().equalsIgnoreCase("administrator")) {
+					if (role.getTitle().equalsIgnoreCase(ADMINISTRATOR)) {
 						object.addProperty(MESSAGE, context.getMessage("role.deactivate.failure", new String[]{role.getTitle()}, l));
 					} else {
 						role.setStatus((byte) 0);
@@ -525,12 +529,12 @@ public class AuthRestController {
 		JsonObject object = new JsonObject();
 		object.addProperty(STATUS, false);
 		User user = userService.getUser(Integer.parseInt(map.get("userId")));
-		if (user.getRole().getTitle().equalsIgnoreCase("administrator")) {			
-			ArrayList<Role> roles = (ArrayList<Role>) roleService.getAllRoles();
+		if (user.getRole().getTitle().equalsIgnoreCase(ADMINISTRATOR)) {			
+			List<Role> roles = roleService.getAllRoles();
 
 			//Removing administrator from the list of roles 
 			for (Role r : roles) 
-				if (r.getTitle().equalsIgnoreCase("administrator")) {
+				if (r.getTitle().equalsIgnoreCase(ADMINISTRATOR)) {
 					roles.remove(r);
 					break;
 				}					
@@ -541,6 +545,89 @@ public class AuthRestController {
 			object.add("roles", new Gson().toJsonTree(roles, new TypeToken<List<Role>>() {}.getType()));
 		} else {
 			object.addProperty(MESSAGE, context.getMessage("rights.not.found", new String[]{"obtain a list of all available roles"}, l));
+		}			
+		return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
+	}
+
+	/********************************************************************************************************************/
+	/************************************** APP FEATURE / SERVICE MANAGEMENT ********************************************/
+	/********************************************************************************************************************/
+	
+	@RequestMapping(value = {"/register/feature", "/register/service"}, method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<String> registerFeature(@RequestParam HashMap<String, String> map) {
+		JsonObject object = new JsonObject();
+		object.addProperty(STATUS, false);
+		SimpleEntry<Boolean, String> result = FieldValidator.validate(map, "name", "alias");
+		if (!result.getKey()) {
+			object.addProperty(MESSAGE, result.getValue());
+		} else {
+			try {
+				User user = userService.getUser(Integer.parseInt(map.get("userId")));
+				if (user.getRole().getTitle().equalsIgnoreCase(ADMINISTRATOR)) {
+					int featureId = 0;
+					Feature feature = featureService.getFeature(map.get("title"));
+					if (feature != null && feature.getStatus() == 0) {
+						feature.setAlias(map.get("alias"));
+						feature.setStatus((byte) 1);
+						featureService.updateFeature(feature);
+						featureId = feature.getFeatureId();
+					} else if (feature != null && feature.getStatus() == 1) {
+						throw new MySQLIntegrityConstraintViolationException("role already exists");
+					} else {
+						feature = new Feature(map.get("name"), map.get("alias"));					
+						featureId = featureService.insertFeature(feature);	
+					}					
+					object.addProperty(STATUS, featureId > 0);
+					object.addProperty(MESSAGE, context.getMessage(featureId > 0 ? "feature.insertion.success" : "feature.insertion.failure", new String[]{map.get("name")}, l));	
+				} else {
+					object.addProperty(MESSAGE, context.getMessage("rights.not.found", new String[]{"introduce a new application feature or service"}, l));
+				}			
+			} catch (ConstraintViolationException | MySQLIntegrityConstraintViolationException e) {				
+				object.addProperty(MESSAGE, context.getMessage("feature.already.exist", new String[]{map.get("name")}, l));
+			}
+		}
+		return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
+	}
+	
+	@RequestMapping(value = {"/deactivate/feature", "/deactivate/service"}, method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<String> deactivateFeature(@RequestParam HashMap<String, String> map) {
+		JsonObject object = new JsonObject();
+		object.addProperty(STATUS, false);
+		SimpleEntry<Boolean, String> result = FieldValidator.validate(map, "featureId");
+		if (!result.getKey()) {
+			object.addProperty(MESSAGE, result.getValue());			
+		} else {
+			User user = userService.getUser(Integer.parseInt(map.get("userId")));
+			if (user.getRole().getTitle().equalsIgnoreCase(ADMINISTRATOR)) {
+				Feature feature = featureService.getFeature(Integer.parseInt(map.get("featureId")));
+				if (feature != null) {
+					feature.setStatus((byte) 0);
+					featureService.updateFeature(feature);
+					object.addProperty(STATUS, true);
+					object.addProperty(MESSAGE, context.getMessage("feature.deactivate.success", new String[]{feature.getName()}, l));
+				} else {
+					object.addProperty(MESSAGE, context.getMessage("feature.details.failure", new String[]{map.get("featureId")}, l));
+				}
+			} else {
+				object.addProperty(MESSAGE, context.getMessage("rights.not.found", new String[]{"deactivate an existing feature"}, l));
+			}			
+		}
+		return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
+	}
+
+	@RequestMapping(value = {"/list/features", "/list/services"}, method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<String> getAllFeatures(@RequestParam HashMap<String, String> map) {
+		JsonObject object = new JsonObject();
+		object.addProperty(STATUS, false);
+		User user = userService.getUser(Integer.parseInt(map.get("userId")));
+		if (user.getRole().getTitle().equalsIgnoreCase(ADMINISTRATOR)) {			
+			List<Feature> features = featureService.getAllFeatures();
+			object.addProperty(STATUS, true);
+			object.addProperty(MESSAGE, context.getMessage(features.size() > 0 ? "feature.list.found" : "feature.list.not.found", 
+					features.size() > 0 ? new String[]{String.valueOf(features.size())} : null, l));			
+			object.add("features", new Gson().toJsonTree(features, new TypeToken<List<Feature>>() {}.getType()));
+		} else {
+			object.addProperty(MESSAGE, context.getMessage("rights.not.found", new String[]{"obtain a list of all available features / services"}, l));
 		}			
 		return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
 	}

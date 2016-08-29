@@ -18,6 +18,123 @@ USE `authorization`;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Table structure for table `access`
+--
+
+DROP TABLE IF EXISTS `access`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `access` (
+  `accessId` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(45) NOT NULL,
+  `alias` varchar(45) DEFAULT NULL,
+  `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT 'Status implies whether service is running or organization has been stopped this service.\nHere status 1 will indicate service is running.',
+  PRIMARY KEY (`accessId`),
+  UNIQUE KEY `unique_service_name` (`name`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `access`
+--
+
+LOCK TABLES `access` WRITE;
+/*!40000 ALTER TABLE `access` DISABLE KEYS */;
+INSERT INTO `access` VALUES (1,'read','Content Reading',1),(2,'update','Updating Content',1),(3,'create','Creating New Content',1),(4,'delete','Deleting Anything',1);
+/*!40000 ALTER TABLE `access` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `access_map`
+--
+
+DROP TABLE IF EXISTS `access_map`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `access_map` (
+  `accessMapId` int(11) NOT NULL AUTO_INCREMENT,
+  `accessId` int(11) NOT NULL COMMENT 'This column will hold the id of access/service/permission which can be related to a user or role',
+  `userId` int(11) DEFAULT NULL COMMENT 'If service/access/permission mapping is according to the user (user wise) then this field will can be used to keep the mapping of user.',
+  `roleId` tinyint(2) DEFAULT NULL COMMENT 'If service/access/permission mapping is according to the role role wise) then this field will can be used to keep the mapping of role.',
+  PRIMARY KEY (`accessMapId`),
+  KEY `fk_service_key` (`accessId`),
+  KEY `fk_access_map_user_key_idx` (`userId`),
+  KEY `fk_access_map_role_key_idx` (`roleId`),
+  CONSTRAINT `fk_access_map_role_key` FOREIGN KEY (`roleId`) REFERENCES `roles` (`roleId`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `fk_access_map_key` FOREIGN KEY (`accessId`) REFERENCES `access` (`accessId`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `fk_access_map_user_key` FOREIGN KEY (`userId`) REFERENCES `users` (`userId`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `access_map`
+--
+
+LOCK TABLES `access_map` WRITE;
+/*!40000 ALTER TABLE `access_map` DISABLE KEYS */;
+INSERT INTO `access_map` VALUES (1,1,1,NULL),(2,2,1,NULL),(3,2,2,NULL),(4,1,3,NULL);
+/*!40000 ALTER TABLE `access_map` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `features`
+--
+
+DROP TABLE IF EXISTS `features`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `features` (
+  `featureId` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(45) NOT NULL,
+  `alias` varchar(45) DEFAULT NULL,
+  `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT 'Status implies whether feature/service/permission/access is running or organization has been stopped it.\nHere status 1 will indicate feature/service is running or feature type is active.',
+  PRIMARY KEY (`featureId`),
+  UNIQUE KEY `unique_features_name` (`name`)
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `features`
+--
+
+LOCK TABLES `features` WRITE;
+/*!40000 ALTER TABLE `features` DISABLE KEYS */;
+INSERT INTO `features` VALUES (5,'read','Reading Content',0);
+/*!40000 ALTER TABLE `features` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `licenses`
+--
+
+DROP TABLE IF EXISTS `licenses`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `licenses` (
+  `licenseId` int(11) NOT NULL AUTO_INCREMENT,
+  `featureId` int(11) NOT NULL COMMENT 'This column will hold the id of access/service/permission which can be related to a user or role',
+  `userId` int(11) DEFAULT NULL COMMENT 'If service/access/permission/license mapping is according to the user (user wise) then this field will can be used to keep the mapping of user.',
+  `roleId` tinyint(2) DEFAULT NULL COMMENT 'If service/access/permission/license mapping is according to the role role wise) then this field will can be used to keep the mapping of role.',
+  PRIMARY KEY (`licenseId`),
+  KEY `fk_feature_key` (`featureId`),
+  KEY `fk_license_user_key_idx` (`userId`),
+  KEY `fk_license_role_key_idx` (`roleId`),
+  CONSTRAINT `fk_license_role_key` FOREIGN KEY (`roleId`) REFERENCES `roles` (`roleId`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `fk_license_feature_key` FOREIGN KEY (`featureId`) REFERENCES `features` (`featureId`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `fk_license_user_key` FOREIGN KEY (`userId`) REFERENCES `users` (`userId`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `licenses`
+--
+
+LOCK TABLES `licenses` WRITE;
+/*!40000 ALTER TABLE `licenses` DISABLE KEYS */;
+/*!40000 ALTER TABLE `licenses` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `question_map`
 --
 
@@ -104,62 +221,6 @@ INSERT INTO `roles` VALUES (1,'administrator','administrator',1),(2,'user','prem
 UNLOCK TABLES;
 
 --
--- Table structure for table `service_map`
---
-
-DROP TABLE IF EXISTS `service_map`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `service_map` (
-  `serviceMapId` int(11) NOT NULL AUTO_INCREMENT,
-  `userId` int(11) NOT NULL,
-  `serviceId` int(11) NOT NULL,
-  PRIMARY KEY (`serviceMapId`),
-  KEY `fk_service_key` (`serviceId`),
-  KEY `fk_user_service_map_key` (`userId`),
-  CONSTRAINT `fk_service_key` FOREIGN KEY (`serviceId`) REFERENCES `services` (`serviceId`),
-  CONSTRAINT `fk_user_service_map_key` FOREIGN KEY (`userId`) REFERENCES `users` (`userId`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=latin1;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `service_map`
---
-
-LOCK TABLES `service_map` WRITE;
-/*!40000 ALTER TABLE `service_map` DISABLE KEYS */;
-INSERT INTO `service_map` VALUES (1,1,1),(2,1,2),(3,2,2),(4,3,1);
-/*!40000 ALTER TABLE `service_map` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `services`
---
-
-DROP TABLE IF EXISTS `services`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `services` (
-  `serviceId` int(11) NOT NULL AUTO_INCREMENT,
-  `name` varchar(45) NOT NULL,
-  `alias` varchar(45) DEFAULT NULL,
-  `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT 'Status implies whether service is running or organization has been stopped this service.\nHere status 1 will indicate service is running.',
-  PRIMARY KEY (`serviceId`),
-  UNIQUE KEY `unique_service_name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=latin1;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `services`
---
-
-LOCK TABLES `services` WRITE;
-/*!40000 ALTER TABLE `services` DISABLE KEYS */;
-INSERT INTO `services` VALUES (1,'read','Content Reading',1),(2,'update','Updating Content',1),(3,'create','Creating New Content',1),(4,'delete','Deleting Anything',1);
-/*!40000 ALTER TABLE `services` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
 -- Table structure for table `sessions`
 --
 
@@ -190,7 +251,7 @@ CREATE TABLE `sessions` (
 
 LOCK TABLES `sessions` WRITE;
 /*!40000 ALTER TABLE `sessions` DISABLE KEYS */;
-INSERT INTO `sessions` VALUES (1,2,'Apple Iphone 5c','mobile','new delhi, india','23412342343432',NULL,'8f57f216-7f4c-4328-81d5-32b426df8489','2016-07-29 14:54:52','2016-07-29 14:54:52',1),(32,1,'Google Chrome','computer',NULL,'198.168.1.84',NULL,'cee5aa1b-e05a-43e9-9532-f979b10e9f9a','2016-08-05 14:52:50','2016-08-28 22:39:08',1),(42,30,'Google Chrome','computer',NULL,'198.168.1.84',NULL,'0c3a518f-54fd-46c2-98a1-f70fb0e721f6','2016-08-06 18:06:13','2016-08-06 18:25:58',1),(43,23,'Google Chrome','computer',NULL,'198.168.1.84',NULL,'c4df466f-b35d-4ba7-aeaa-50c64acc2f77','2016-08-28 22:32:56','2016-08-28 22:32:56',1);
+INSERT INTO `sessions` VALUES (1,2,'Apple Iphone 5c','mobile','new delhi, india','23412342343432',NULL,'8f57f216-7f4c-4328-81d5-32b426df8489','2016-07-29 14:54:52','2016-07-29 14:54:52',1),(32,1,'Google Chrome','computer',NULL,'198.168.1.84',NULL,'31263267-c788-4043-83fb-2e7a0e4c5353','2016-08-05 14:52:50','2016-08-30 01:20:15',1),(42,30,'Google Chrome','computer',NULL,'198.168.1.84',NULL,'1735f74c-c03f-4228-809e-bb611a947024','2016-08-06 18:06:13','2016-08-30 01:18:40',1),(43,23,'Google Chrome','computer',NULL,'198.168.1.84',NULL,'c4df466f-b35d-4ba7-aeaa-50c64acc2f77','2016-08-28 22:32:56','2016-08-28 22:32:56',1);
 /*!40000 ALTER TABLE `sessions` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -275,44 +336,6 @@ UNLOCK TABLES;
 --
 -- Dumping routines for database 'authorization'
 --
-/*!50003 DROP PROCEDURE IF EXISTS `sp_authorization_insert_role` */;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8 */ ;
-/*!50003 SET character_set_results = utf8 */ ;
-/*!50003 SET collation_connection  = utf8_general_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'STRICT_TRANS_TABLES,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION' */ ;
-DELIMITER ;;
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_authorization_insert_role`(in _title varchar(45), in _alias varchar(45))
-BEGIN
-	insert into roles (roles.`title`, roles.`alias`) values (_title, _alias);
-END ;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
-/*!50003 DROP PROCEDURE IF EXISTS `sp_authorization_insert_service` */;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8 */ ;
-/*!50003 SET character_set_results = utf8 */ ;
-/*!50003 SET collation_connection  = utf8_general_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'STRICT_TRANS_TABLES,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION' */ ;
-DELIMITER ;;
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_authorization_insert_service`(in _name varchar(45), in _alias varchar(45))
-BEGIN
-	insert into services (services.`name`, services.`alias`) values (_name, _alias);
-END ;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -323,4 +346,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2016-08-29  1:28:08
+-- Dump completed on 2016-08-30  1:37:22
