@@ -21,17 +21,29 @@ public class License {
     @JoinColumn(name="featureId")
 	private Feature feature;
 	
-	@ManyToOne(optional = false, cascade = {CascadeType.DETACH, CascadeType.REFRESH, CascadeType.PERSIST, CascadeType.MERGE})
+	@ManyToOne(optional = true, cascade = {CascadeType.DETACH, CascadeType.REFRESH, CascadeType.PERSIST, CascadeType.MERGE})
     @JoinColumn(name="userId")
 	private User user;
 	
-	@ManyToOne(optional = false, cascade = {CascadeType.DETACH, CascadeType.REFRESH, CascadeType.PERSIST, CascadeType.MERGE})
+	@ManyToOne(optional = true, cascade = {CascadeType.DETACH, CascadeType.REFRESH, CascadeType.PERSIST, CascadeType.MERGE})
     @JoinColumn(name="roleId")
 	private Role role;
 
 	public License() {
 		super();
 	}
+
+	public License(Feature feature, User user) {
+		super();
+		this.feature = feature;
+		this.user = user;
+	}
+
+	public License(Feature feature, Role role) {
+		super();
+		this.feature = feature;
+		this.role = role;
+	}	
 
 	public int getLicenseId() {
 		return licenseId;

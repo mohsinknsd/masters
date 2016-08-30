@@ -22,6 +22,9 @@ public class Feature {
 	@Column(name = "alias", nullable = true)
 	private String alias;
 	
+	@Column(name = "description", nullable = true)
+	private String description;
+	
 	@Column(name = "status", nullable = false)
 	private byte status;
 	
@@ -29,10 +32,11 @@ public class Feature {
 		super();		
 	}
 
-	public Feature(String name, String alias) {
+	public Feature(String name, String alias, String description) {
 		super();
 		this.name = name;
 		this.alias = alias;
+		this.description = description;
 		this.status = 1;
 	}
 
@@ -59,6 +63,14 @@ public class Feature {
 	public void setAlias(String alias) {
 		this.alias = alias;
 	}
+	
+	public String getDescription() {
+		return description;
+	}
+
+	public void setDescription(String description) {
+		this.description = description;
+	}
 
 	public byte getStatus() {
 		return status;
@@ -70,9 +82,12 @@ public class Feature {
 
 	@Override
 	public String toString() {
-		return "Feature [featureId=" + featureId + ", "
+		return "Feature [featureId="
+				+ featureId
+				+ ", "
 				+ (name != null ? "name=" + name + ", " : "")
-				+ (alias != null ? "alias=" + alias + ", " : "") + "status="
-				+ status + "]";
+				+ (alias != null ? "alias=" + alias + ", " : "")
+				+ (description != null ? "description=" + description + ", "
+						: "") + "status=" + status + "]";
 	}
 }

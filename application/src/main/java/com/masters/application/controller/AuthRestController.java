@@ -45,6 +45,7 @@ import com.google.gson.reflect.TypeToken;
 import com.masters.application.config.MailConfiguration;
 import com.masters.application.mail.ConfirmationMailHandler;
 import com.masters.authorization.model.Feature;
+import com.masters.authorization.model.License;
 import com.masters.authorization.model.Role;
 import com.masters.authorization.model.Session;
 import com.masters.authorization.model.Status;
@@ -69,11 +70,17 @@ public class AuthRestController {
 	/**
 	 * ISSUES : : : : ------
 	 * EMAIL validations
-	 *   and
+	 *  and
+	 * Integer validations before Integer.parseInt(STRING) because getting java.lang.NumberFormatException sometimes
+	 *  and
 	 * user can not be null if token filter give permission to be entered in this controller
 	 * so remove user!= null check 
 	 *  and 
-	 * remove user.not.found 
+	 * remove user.not.found
+	 *  and 
+	 * Enter all data to db in lower case (verify first) 
+	 * and
+	 * check admin account disabled/block before calling admin only services
 	 */
 
 	@Autowired Environment environment;
@@ -505,7 +512,7 @@ public class AuthRestController {
 			User user = userService.getUser(Integer.parseInt(map.get("userId")));
 			if (user.getRole().getTitle().equalsIgnoreCase("administrator")) {
 				Role role = roleService.getRole(Integer.parseInt(map.get("roleId")));
-				if (role != null) {
+				if (role != null && role.getStatus() == 1) {
 					if (role.getTitle().equalsIgnoreCase(ADMINISTRATOR)) {
 						object.addProperty(MESSAGE, context.getMessage("role.deactivate.failure", new String[]{role.getTitle()}, l));
 					} else {
@@ -557,7 +564,7 @@ public class AuthRestController {
 	public ResponseEntity<String> registerFeature(@RequestParam HashMap<String, String> map) {
 		JsonObject object = new JsonObject();
 		object.addProperty(STATUS, false);
-		SimpleEntry<Boolean, String> result = FieldValidator.validate(map, "name", "alias");
+		SimpleEntry<Boolean, String> result = FieldValidator.validate(map, "name", "alias", "description");
 		if (!result.getKey()) {
 			object.addProperty(MESSAGE, result.getValue());
 		} else {
@@ -565,16 +572,16 @@ public class AuthRestController {
 				User user = userService.getUser(Integer.parseInt(map.get("userId")));
 				if (user.getRole().getTitle().equalsIgnoreCase(ADMINISTRATOR)) {
 					int featureId = 0;
-					Feature feature = featureService.getFeature(map.get("title"));
+					Feature feature = featureService.getFeature(map.get("name"));					
 					if (feature != null && feature.getStatus() == 0) {
 						feature.setAlias(map.get("alias"));
 						feature.setStatus((byte) 1);
 						featureService.updateFeature(feature);
 						featureId = feature.getFeatureId();
-					} else if (feature != null && feature.getStatus() == 1) {
+					} else if (feature != null && feature.getStatus() == 1) {						
 						throw new MySQLIntegrityConstraintViolationException("role already exists");
 					} else {
-						feature = new Feature(map.get("name"), map.get("alias"));					
+						feature = new Feature(map.get("name"), map.get("alias"), map.get("description"));					
 						featureId = featureService.insertFeature(feature);	
 					}					
 					object.addProperty(STATUS, featureId > 0);
@@ -600,7 +607,7 @@ public class AuthRestController {
 			User user = userService.getUser(Integer.parseInt(map.get("userId")));
 			if (user.getRole().getTitle().equalsIgnoreCase(ADMINISTRATOR)) {
 				Feature feature = featureService.getFeature(Integer.parseInt(map.get("featureId")));
-				if (feature != null) {
+				if (feature != null && feature.getStatus() == 1) {
 					feature.setStatus((byte) 0);
 					featureService.updateFeature(feature);
 					object.addProperty(STATUS, true);
@@ -620,7 +627,7 @@ public class AuthRestController {
 		JsonObject object = new JsonObject();
 		object.addProperty(STATUS, false);
 		User user = userService.getUser(Integer.parseInt(map.get("userId")));
-		if (user.getRole().getTitle().equalsIgnoreCase(ADMINISTRATOR)) {			
+		if (user.getRole().getTitle().equalsIgnoreCase(ADMINISTRATOR)) {
 			List<Feature> features = featureService.getAllFeatures();
 			object.addProperty(STATUS, true);
 			object.addProperty(MESSAGE, context.getMessage(features.size() > 0 ? "feature.list.found" : "feature.list.not.found", 
@@ -629,6 +636,67 @@ public class AuthRestController {
 		} else {
 			object.addProperty(MESSAGE, context.getMessage("rights.not.found", new String[]{"obtain a list of all available features / services"}, l));
 		}			
+		return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
+	}
+
+	@RequestMapping(value = {"/license/user", "/subscribe/user"}, method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<String> userSubsription(@RequestParam HashMap<String, String> map) throws MySQLIntegrityConstraintViolationException {
+		JsonObject object = new JsonObject();
+		object.addProperty(STATUS, false);
+		SimpleEntry<Boolean, String> result = FieldValidator.validate(map, "featureId");
+		if (!result.getKey()) {
+			object.addProperty(MESSAGE, result.getValue());
+		} else {
+			User user = userService.getUser(Integer.parseInt(map.get("userId")));
+			Feature feature =  featureService.getFeature(Integer.parseInt(map.get("featureId")));
+			if (feature != null && feature.getStatus() == 1) {
+				License license = licenseService.getLicense(feature, user);
+				if (license != null) {
+					object.addProperty(MESSAGE, context.getMessage("license.user.exists", new String[]{feature.getName(), user.getFirstname()}, l));
+				} else {
+					license = new License(feature, user);
+					int licenseId = licenseService.insertLicense(license);
+					object.addProperty(STATUS, licenseId > 0);
+					object.addProperty(MESSAGE, context.getMessage(licenseId > 0 ? "license.user.success" : "license.user.failure", 
+							licenseId > 0 ? new String[]{user.getFirstname(), feature.getName()} : new String[]{feature.getName()}, l));
+				}
+			} else {
+				object.addProperty(MESSAGE, context.getMessage("feature.details.failure", new String[]{map.get("featureId")}, l));					
+			}
+		}
+		return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
+	}
+	
+	@RequestMapping(value = {"/license/role", "/subscribe/role"}, method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<String> roleSubsription(@RequestParam HashMap<String, String> map) throws MySQLIntegrityConstraintViolationException {
+		JsonObject object = new JsonObject();
+		object.addProperty(STATUS, false);
+		SimpleEntry<Boolean, String> result = FieldValidator.validate(map, "roleId", "featureId");
+		if (!result.getKey()) {
+			object.addProperty(MESSAGE, result.getValue());
+		} else {
+			User user = userService.getUser(Integer.parseInt(map.get("userId")));
+			if (user.getRole().getTitle().equalsIgnoreCase(ADMINISTRATOR)) {
+				Role role = roleService.getRole(Integer.parseInt(map.get("roleId")));
+				Feature feature =  featureService.getFeature(Integer.parseInt(map.get("featureId")));
+				if (feature != null && feature.getStatus() == 1) {
+					License license = licenseService.getLicense(feature, role);
+					if (license != null) {
+						object.addProperty(MESSAGE, context.getMessage("license.role.exists", new String[]{feature.getName(), role.getAlias()}, l));
+					} else {
+						license = new License(feature, role);
+						int licenseId = licenseService.insertLicense(license);
+						object.addProperty(STATUS, licenseId > 0);
+						object.addProperty(MESSAGE, context.getMessage(licenseId > 0 ? "license.role.success" : "license.role.failure", 
+								licenseId > 0 ? new String[]{role.getTitle(), feature.getName()} : new String[]{feature.getName()}, l));
+					}
+				} else {
+					object.addProperty(MESSAGE, context.getMessage("feature.details.failure", new String[]{map.get("featureId")}, l));					
+				}		
+			} else {
+				object.addProperty(MESSAGE, context.getMessage("rights.not.found", new String[]{"subscribe a feature for the role"}, l));
+			}			
+		}
 		return new ResponseEntity<String>(gson.toJson(object), HttpStatus.OK);
 	}
 }
